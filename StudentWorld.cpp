@@ -6,7 +6,6 @@
 using namespace std;
 
 //Find better place for this function? 
-int placeWithConstraint(const int& lconstraint, const int& uconstraint, const int& randUpper);
 GameWorld* createStudentWorld(string assetPath)
 {
 	return new StudentWorld(assetPath);
@@ -24,47 +23,13 @@ int StudentWorld::init()
     m_socrates = new Socrates(this); 
     //INITIALIZING DIRT
     int numDirt = max(180 - 20 * getLevel(), 20); 
-    for (int i = 0; i < numDirt; i++) 
+    for (int i = 0; i < numDirt; i++)
     {
         //DIRT CANNOT OVERLAP WITH FOOD OR PITS
         int x, y;
-        const double OUTER = 120; 
-        double coordRadius, outerRadius, xlen, ylen, outerxlen, outerylen; 
-
-        //CHECK FOR VALID POS!
-        do {
-            x = placeWithConstraint(0, VIEW_RADIUS + OUTER, VIEW_RADIUS + OUTER); 
-            y = placeWithConstraint(0, VIEW_RADIUS + OUTER, VIEW_RADIUS + OUTER);
-
-            //Get the max lengths x and y can be, with respect to the angle that the created x and y is at
-            double angle = (x, y, VIEW_RADIUS, VIEW_RADIUS);
-            outerxlen = OUTER * cos(angle);
-            outerylen = OUTER * sin(angle); 
-
-           
-            if (x < VIEW_RADIUS) //x is "negative" (if the center was 0, 0)
-                xlen = (VIEW_RADIUS - x); //For example, if x was 120, and the center of the circle was 128, 
-            else if (x == VIEW_RADIUS)
-                xlen = 0;
-            else //x is positive
-                xlen = (x - VIEW_RADIUS);
-
-            if (y < VIEW_RADIUS) //y is "negative" (if the center was 0,0)
-                ylen = (VIEW_RADIUS - y); 
-            else if (y == VIEW_RADIUS)
-                ylen = 0; 
-            else //x is positive
-                ylen = (y - VIEW_RADIUS); 
-            
-
-            coordRadius = sqrt(xlen * xlen + ylen * ylen); //Radius of the coordinate
-            outerRadius = sqrt(outerxlen * outerxlen + outerylen * outerylen); //Boundary -- coord radius can't be this size or bigger
-   
-            
-        } while (coordRadius > outerRadius); 
-        
-        Dirt* z = new Dirt(this,x, y); 
-        m_actors.push_back(z); 
+        validPlacement(x, y);
+        Dirt* z = new Dirt(this, x, y);
+        m_actors.push_back(z);
     }
     return GWSTATUS_CONTINUE_GAME;
 }
@@ -72,22 +37,33 @@ int StudentWorld::init()
 int StudentWorld::move()
 {
 
-    //Let all actors do what they need to do!
     m_socrates->doSomething(); 
     list<Actor*>::iterator actorItr = m_actors.begin(); 
+
+    //TODO: If all bacteria have been killed, and all pits have disappeared,
+    //ADVANCE TO NEXT LEVEL! (Probably will need to keep count of bacteria heheh)
+
+    //Let all actors do what they need to do!
     while (actorItr != m_actors.end())
     {
-        
-        (*actorItr)->doSomething(); 
+        //Living actors do something
+        if ((*actorItr)->alive())
+        {
+            (*actorItr)->doSomething();
+        }
+        //If an actor kills socrates, then then game over! 
+        if (!m_socrates->alive())
+            return GWSTATUS_PLAYER_DIED; 
         actorItr++; 
     }
 
-    //Look for dead actors!
-    if (!m_socrates->alive()) //If Socrates is dead, then the level is over!
-        return GWSTATUS_PLAYER_DIED; 
 
-    /*  CAUSES CRASH
-    //If other actors are dead, remove them
+   
+    
+    //TODO: Add new goodies
+    //TODO: Update status text 
+
+    //If actors are dead, remove them
     actorItr = m_actors.begin();
     while (actorItr != m_actors.end())
     {
@@ -99,10 +75,9 @@ int StudentWorld::move()
             *actorItr = nullptr;
             actorItr = m_actors.erase(actorItr);
         }
+        else
+            actorItr++;
     }
-    */
-    //TODO: Add new goodies
-
     return GWSTATUS_CONTINUE_GAME;
 }
 
@@ -121,6 +96,7 @@ StudentWorld::~StudentWorld()
 {
     cleanUp(); 
 }
+
 ////////////////////////////
 //PRIVATE HELPER FUNCTIONS//
 ////////////////////////////
@@ -134,7 +110,7 @@ void StudentWorld::eraseSingle(list<Actor*>::iterator actorItr)
 }
 */ 
 //Useful for placing objects on the screen. Will avoid placement in areas where not allowed. 
-int placeWithConstraint(const int& lconstraint, const int& uconstraint, const int& randUpper)
+int StudentWorld::placeWithConstraint(const int& lconstraint, const int& uconstraint, const int& randUpper)
 {
     int coord; 
     do
@@ -147,7 +123,7 @@ int placeWithConstraint(const int& lconstraint, const int& uconstraint, const in
 
 //Returns angle between point 1 and point 2
 //Point 2 should be the center of the circle (VIEW_RADIUS, VIEW_RADIUS) 
-double angle(int x1, int y1, int x2, int y2)
+double StudentWorld::angle(int x1, int y1, int x2, int y2)
 {
     const double PI = 4 * atan(1);
     double y = y1 - y2;
@@ -156,4 +132,42 @@ double angle(int x1, int y1, int x2, int y2)
         return 90;
     double val = y / x;
     return atan(val) * 180 / PI;
+}
+
+void StudentWorld::validPlacement(int& x, int& y)
+{
+    const double OUTER = 120;
+    double coordRadius, outerRadius, xlen, ylen, outerxlen, outerylen;
+
+    //CHECK FOR VALID POS!
+    do {
+        x = placeWithConstraint(0, VIEW_RADIUS + OUTER, VIEW_RADIUS + OUTER);
+        y = placeWithConstraint(0, VIEW_RADIUS + OUTER, VIEW_RADIUS + OUTER);
+
+        //Get the max lengths x and y can be, with respect to the angle that the created x and y is at
+        double angle = (x, y, VIEW_RADIUS, VIEW_RADIUS);
+        outerxlen = OUTER * cos(angle);
+        outerylen = OUTER * sin(angle);
+
+
+        if (x < VIEW_RADIUS) //x is "negative" (if the center was 0, 0)
+            xlen = (VIEW_RADIUS - x); //For example, if x was 120, and the center of the circle was 128, 
+        else if (x == VIEW_RADIUS)
+            xlen = 0;
+        else //x is positive
+            xlen = (x - VIEW_RADIUS);
+
+        if (y < VIEW_RADIUS) //y is "negative" (if the center was 0,0)
+            ylen = (VIEW_RADIUS - y);
+        else if (y == VIEW_RADIUS)
+            ylen = 0;
+        else //x is positive
+            ylen = (y - VIEW_RADIUS);
+
+
+        coordRadius = sqrt(xlen * xlen + ylen * ylen); //Radius of the coordinate
+        outerRadius = sqrt(outerxlen * outerxlen + outerylen * outerylen); //Boundary -- coord radius can't be this size or bigger
+
+
+    } while (coordRadius > outerRadius);
 }

@@ -112,7 +112,9 @@ void Pickups::doSomething()
 	overlapAction(nullptr);
 	killIfDead();
 }
-//Protected helper functions:
+///////////////////////////////
+//GOODIE CLASS PROTECTED FUNC//
+///////////////////////////////
 //Determines if Pickup overlaps with Socrates
 bool Pickups::socOverlap() const
 {
@@ -131,9 +133,6 @@ void Pickups::killIfDead()
 ///////////////////////////////
 //RESTORE HEALTH GOODIE CLASS//
 ///////////////////////////////
-
-
-//Protected helper functions
 
 //When Socrates touches a restore health goodie, 
 //Update the score
