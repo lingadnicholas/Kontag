@@ -30,11 +30,10 @@ int StudentWorld::init()
         int x, y;
         const double OUTER = 120; 
         double coordRadius, outerRadius, xlen, ylen, outerxlen, outerylen; 
-        bool xNeg = false, yNeg = false; 
 
         //CHECK FOR VALID POS!
         do {
-            x = placeWithConstraint(0, VIEW_RADIUS + OUTER, VIEW_RADIUS + OUTER); //***BOUNDS ARE WRONG***, IT IS A RADIUS. TRIG TIME
+            x = placeWithConstraint(0, VIEW_RADIUS + OUTER, VIEW_RADIUS + OUTER); 
             y = placeWithConstraint(0, VIEW_RADIUS + OUTER, VIEW_RADIUS + OUTER);
 
             //Get the max lengths x and y can be, with respect to the angle that the created x and y is at
@@ -58,8 +57,8 @@ int StudentWorld::init()
                 ylen = (y - VIEW_RADIUS); 
             
 
-            coordRadius = sqrt(xlen * xlen + ylen * ylen); //Radius of 
-            outerRadius = sqrt(outerxlen * outerxlen + outerylen * outerylen); //Radius of the 
+            coordRadius = sqrt(xlen * xlen + ylen * ylen); //Radius of the coordinate
+            outerRadius = sqrt(outerxlen * outerxlen + outerylen * outerylen); //Boundary -- coord radius can't be this size or bigger
    
             
         } while (coordRadius > outerRadius); 
@@ -72,9 +71,10 @@ int StudentWorld::init()
 
 int StudentWorld::move()
 {
-    // This code is here merely to allow the game to build, run, and terminate after you hit enter.
-    // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
-    std::list<Actor*>::iterator actorItr = m_actors.begin(); 
+
+    //Let all actors do what they need to do!
+    m_socrates->doSomething(); 
+    list<Actor*>::iterator actorItr = m_actors.begin(); 
     while (actorItr != m_actors.end())
     {
         
@@ -82,18 +82,38 @@ int StudentWorld::move()
         actorItr++; 
     }
 
-   // decLives(); //Remove 
-    return GWSTATUS_PLAYER_DIED;
+    //Look for dead actors!
+    if (!m_socrates->alive()) //If Socrates is dead, then the level is over!
+        return GWSTATUS_PLAYER_DIED; 
+
+    /*  CAUSES CRASH
+    //If other actors are dead, remove them
+    actorItr = m_actors.begin();
+    while (actorItr != m_actors.end())
+    {
+        if (!(*actorItr)->alive())
+        {
+            //DUPLICATING CODE.... I WANT TO USE A FUNCTION BUT
+            //HAVING TROUBLE PASSING IN AN ITERATOR TO A FUNCTION
+            delete(*actorItr);
+            *actorItr = nullptr;
+            actorItr = m_actors.erase(actorItr);
+        }
+    }
+    */
+    //TODO: Add new goodies
+
+    return GWSTATUS_CONTINUE_GAME;
 }
 
 void StudentWorld::cleanUp()
 {
-    std::list<Actor*>::iterator actorItr = m_actors.begin();
+    list<Actor*>::iterator actorItr = m_actors.begin();
     while (actorItr != m_actors.end())
     {
-        delete (*actorItr);
+        delete(*actorItr);
         *actorItr = nullptr;
-        actorItr = m_actors.erase(actorItr); 
+        actorItr = m_actors.erase(actorItr);
     }
 }
 
@@ -101,8 +121,18 @@ StudentWorld::~StudentWorld()
 {
     cleanUp(); 
 }
-
-
+////////////////////////////
+//PRIVATE HELPER FUNCTIONS//
+////////////////////////////
+/* FIGUIRE OUT LATER
+//Correctly erases a single actor from the game. 
+void StudentWorld::eraseSingle(list<Actor*>::iterator actorItr)
+{
+    delete(*actorItr); 
+    *actorItr = nullptr;
+    actorItr = m_actors.erase(actorItr); 
+}
+*/ 
 //Useful for placing objects on the screen. Will avoid placement in areas where not allowed. 
 int placeWithConstraint(const int& lconstraint, const int& uconstraint, const int& randUpper)
 {
@@ -119,16 +149,11 @@ int placeWithConstraint(const int& lconstraint, const int& uconstraint, const in
 //Point 2 should be the center of the circle (VIEW_RADIUS, VIEW_RADIUS) 
 double angle(int x1, int y1, int x2, int y2)
 {
-    const double PI = 3.14159265358979323846;
+    const double PI = 4 * atan(1);
     double y = y1 - y2;
     double x = x1 - x2;
     if (x == 0)
-    {
-        if (y > 0)
-            return 90;
-        else
-            return 270; 
-    }
+        return 90;
     double val = y / x;
     return atan(val) * 180 / PI;
 }
