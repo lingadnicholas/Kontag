@@ -23,18 +23,34 @@ StudentWorld::StudentWorld(string assetPath)
 int StudentWorld::init()
 {
     m_socrates = new Socrates(this); 
-
     //TODO: INTIALIZE L PITS
 
     //TODO: INITIALIZES MIN(5 * L, 25) FOOD
     //CANNOT OVERLAP!!
+    //Place object. Check all dirt/pits.
+    //If it is dirt or pit. 
+    //Place it somewhere else (call validPlacement again) until it's not a dirt or pit. 
 
+    /*
+    int numFood = min(5 * getLevel(), 25); 
+    for (int i = 0; i < numFood; i++)
+    {
+        int x, y; 
+        do {
+            validPlacement(x, y)
+        } while (); 
+    }
+    */ 
+    //TODO: write a function that takes in an Actor, checks if 
+    // its position is or isn't overlapping with a dirt, food, or pit
+    //Maybe something like:
+    // bool invalidOverlap(const Actor* current, const bool checkPit, const bool checkFood, const bool checkDirt) const;
 
     //INITIALIZING DIRT
     int numDirt = max(180 - 20 * getLevel(), 20); 
     for (int i = 0; i < numDirt; i++)
     {
-        //DIRT CANNOT OVERLAP WITH FOOD OR PITS
+        //TODO: DIRT CANNOT OVERLAP WITH FOOD OR PITS
         int x, y;
         validPlacement(x, y);
         Dirt* newDirt = new Dirt(this, x, y);
@@ -62,7 +78,10 @@ int StudentWorld::move()
         }
         //If an actor kills socrates, then then game over! 
         if (!m_socrates->alive())
-            return GWSTATUS_PLAYER_DIED; 
+        {
+            delete m_socrates; 
+            return GWSTATUS_PLAYER_DIED;
+        }
         actorItr++; 
     }
     
@@ -140,7 +159,6 @@ int StudentWorld::move()
         }
     }
 
-    //TODO: Update status text
     //First gather information that must be displayed. 
     int score = getScore(); 
     int level = getLevel(); 
@@ -167,8 +185,6 @@ int StudentWorld::move()
     {
         if (!(*actorItr)->alive())
         {
-            //DUPLICATING CODE.... I WANT TO USE A FUNCTION BUT
-            //HAVING TROUBLE PASSING IN AN ITERATOR TO A FUNCTION
             actorItr = eraseSingle(actorItr);
         }
         else
@@ -270,9 +286,54 @@ void StudentWorld::validPlacement(int& x, int& y)
 void StudentWorld::outputString(int displayNum, int numDigits, string literal, string& display)
 {
     ostringstream oss_displayNext;
+    //If you are displaying a SCORE and it is negative.....
+    if (numDigits == 6 && displayNum < 0)
+    {
+        displayNum *= -1; //Make positive for display purposes
+        oss_displayNext << "-";
+        numDigits--; 
+    }
     oss_displayNext.fill('0'); //Fills remainder with 0s
+ 
     oss_displayNext << setw(numDigits) << displayNum; 
     //Append necessary information to end of string
     display += literal;
     display += oss_displayNext.str();
+}
+
+//Return true if overlap is not allowed to happen 
+//Return false otherwise. 
+//TODO: IMPLEMENT THIS FUNCTION INTO SPAWNING YOUR FOOD!
+bool StudentWorld::invalidOverlap(const Actor* current, const bool checkPit, const bool checkFood, const bool checkDirt) const
+{
+    list<Actor*>::const_iterator actorItr = m_actors.begin();
+    while (actorItr != m_actors.end())
+    {
+        if (checkPit)
+        {
+            if ((*actorItr)->isPit())
+            {
+                if (current->Actor::overlaps(current, *(actorItr)))
+                    return true; 
+            }
+        }
+        if (checkFood)
+        {
+            if ((*actorItr)->isBacteriaInteractable() && !(*actorItr)->usedBySocrates())
+            {
+                if (current->Actor::overlaps(current, *(actorItr)))
+                    return true; 
+            }
+        }
+        if (checkDirt)
+        {
+            if ((*actorItr)->isDirt())
+            {
+                if (current->Actor::overlaps(current, *(actorItr)))
+                    return true;
+            }
+        }
+        actorItr++; 
+    }
+    return false; 
 }

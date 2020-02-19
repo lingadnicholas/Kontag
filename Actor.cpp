@@ -8,9 +8,6 @@ using namespace std;
 ///////////////
 //ACTOR CLASS//
 ///////////////
-////////////////////////////////////
-//ACTOR PROTECTED HELPER FUNCTIONS//
-////////////////////////////////////
 double Actor::radialDistance(const Actor* first, const Actor* second) const
 {
 	double firstx = first->getX(), firsty = first->getY(),
@@ -21,6 +18,10 @@ double Actor::radialDistance(const Actor* first, const Actor* second) const
 	double yDist = secondy - firsty;
 	return sqrt(xDist * xDist + yDist * yDist);
 }
+////////////////////////////////////
+//ACTOR PROTECTED HELPER FUNCTIONS//
+////////////////////////////////////
+
 
 bool Actor::overlaps(const Actor* first, const Actor* second) const
 {
@@ -100,19 +101,24 @@ void Socrates::changePosition(int dir)
 }
 
 ////////////////
-//GOODIE CLASS//
+//PICKUPS CLASS//
 ////////////////
 
 //Pickups will do their thing if need be. 
 void Pickups::doSomething()
 {
+	//Kills goodie/fungus if dead
+	m_lifetime--; 
+	if (m_lifetime <= 0)
+		kill(); 
+	if (!alive())
+		return; 
 	if (!socOverlap())
 		return;
 	overlapAction(nullptr);
-	killIfDead();
 }
 ///////////////////////////////
-//GOODIE CLASS PROTECTED FUNC//
+//PICKUPS CLASS PROTECTED FUNC//
 ///////////////////////////////
 //Determines if Pickup overlaps with Socrates
 bool Pickups::socOverlap() const
@@ -120,13 +126,6 @@ bool Pickups::socOverlap() const
 	if (overlaps(this, m_socrates))
 		return true;
 	return false; 
-}
-
-void Pickups::killIfDead()
-{
-	if (m_lifetime <= 0)
-		kill(); 
-	return; 
 }
 
 ///////////////////////////////
@@ -139,9 +138,6 @@ void Pickups::killIfDead()
 //Set Socrates' HP to full. 
 void ResHealth::overlapAction(Actor* other)
 {
-	killIfDead(); 
-	if (!alive())
-		return; 
 	myWorld()->increaseScore(250); 
 	kill(); 
 	myWorld()->playSound(SOUND_GOT_GOODIE); 
@@ -160,9 +156,6 @@ void ResHealth::overlapAction(Actor* other)
 //Update score and add 5 flame charges
 void ResFlame::overlapAction(Actor* other)
 {
-	killIfDead();
-	if (!alive())
-		return;
 	myWorld()->increaseScore(300);
 	kill();
 	myWorld()->playSound(SOUND_GOT_GOODIE); 
@@ -176,9 +169,6 @@ void ResFlame::overlapAction(Actor* other)
 //Update score and add 1 life
 void ResLife::overlapAction(Actor* other)
 {
-	killIfDead();
-	if (!alive())
-		return;
 	myWorld()->increaseScore(500);
 	kill();
 	myWorld()->playSound(SOUND_GOT_GOODIE);
@@ -192,9 +182,6 @@ void ResLife::overlapAction(Actor* other)
 //Update score and damage him
 void Fungus::overlapAction(Actor* other)
 {
-	killIfDead();
-	if (!alive())
-		return;
 	myWorld()->increaseScore(-50);
 	kill();
 	mySoc()->takeDamage(20); 

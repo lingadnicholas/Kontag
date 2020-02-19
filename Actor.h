@@ -10,6 +10,19 @@ class Socrates;
 For a class to NOT be pure virtual.. you must define
 doSomething()
 overlapAction()
+
+here is a template for a non-abstract class:
+class derivedClass : public baseClass
+{
+public:
+virtual void doSomething()
+{
+}
+virtual void overlapAction(Actor* other)
+{
+}
+private:
+};
 */
 ///////////////
 //ACTOR CLASS//
@@ -22,7 +35,8 @@ public:
 	{
 	}
 
-	//Pure virtual functions	
+	//Pure virtual functions:
+	//Every actor does something. 
 	virtual void doSomething() = 0; 
 
 	//Virtual functions:
@@ -45,9 +59,26 @@ public:
 		return false; 
 	}
 
-	virtual ~Actor()
+	//Most actors do not have HP.
+	virtual bool hasHP() const
 	{
+		return false; 
+	}
 
+	//Most objects are not bacteria interactables
+	virtual bool isBacteriaInteractable() const
+	{
+		return false; 
+	}
+	//Can't find common functionalities of dirts and pits.. so they get their own
+	virtual bool isPit() const
+	{
+		return false;
+	}
+
+	virtual bool isDirt() const
+	{
+		return false;
 	}
 
 	//Other public member functions:
@@ -64,19 +95,26 @@ public:
 	}
 
 
+	virtual ~Actor()
+	{
+
+	}
+
+
+
+
 	//Returns a pointer to the StudentWorld it is associated with. 
 	StudentWorld* myWorld() const
 	{
 		return m_studentworld; 
 	}
 
-protected:
-	//PROTECTED HELPER FUNCTIONS
+	//PUBLIC HELPER FUNCTIONS (StudentWorld uses these too..)
 	double radialDistance(const Actor* first, const Actor* second) const;
 	bool overlaps(const Actor* first, const Actor* second) const;
+protected:
 
-
-
+	//Pure virtual:
 	//Protected, because only used by objects derived from this class. 
 	virtual void overlapAction(Actor* other) = 0;
 
@@ -92,7 +130,7 @@ private:
 	{
 	public: 
 		Dirt(StudentWorld* swptr, double startX, double startY)
-			: Actor(swptr, IID_DIRT, startX, startY, 0, 1) //Specs say 90 degrees.. but this is what looks right 
+			: Actor(swptr, IID_DIRT, startX, startY, 0, 1) 
 		{
 
 		}
@@ -103,17 +141,18 @@ private:
 			return; //Dirt can't do anything! 
 		}
 
-		//Dirt cannot take damage, but they can still be killed. 
-		virtual bool canBeDamaged() const
+		virtual bool isDirt()
 		{
-			return false;
+			return true;
 		}
-
 		//Dirt is set to dead if it comes into contact with spray or flame. 
 		virtual void overlapAction(Actor* other);
 
 		//Returns true if the dirt should block the other object (if it gets too close!) 
 		bool blockObjects(const Actor* other);
+
+		
+
 	
 	private: 
 	};
@@ -130,21 +169,33 @@ private:
 
 		}
 
+		//All of these objects have HP -- that's why they're grouped here! 
+		virtual bool hasHP() const
+		{
+			return true;
+		}
+
 		//Allows units with HP to take damage (or heal!) 
 		virtual void takeDamage(const int& amt)
 		{
 			m_health -= amt;
-			if (m_health < 0)
-				m_health = 0;
+			if (m_health <= 0)
+			{
+				m_health = 0; //Set to 0 for display purposes
+				kill(); 
+			}
 			if (m_health > 100)
 				m_health = 100; //Socrates is the only LivingWithHp that can heal, so this is ok. 
 		}
+
 
 		//Returns current health 
 		int hp() const 
 		{
 			return m_health; 
 		}
+
+	
 		virtual ~LivingWithHP()
 		{
 
@@ -265,7 +316,6 @@ private:
 		virtual void overlapAction(Actor* other) = 0;
 		//Determines if goodie overlaps with Socrates. 
 		bool socOverlap() const;
-		void killIfDead(); 
 	
 
 	private:
@@ -337,5 +387,59 @@ private:
 		private:
 		};
 
+	//////////////////////////
+	//BACTERIA INTERACTABLES//
+	//////////////////////////
+	class BacteriaInteractable : public Actor
+	{
+	public: 
+		BacteriaInteractable(StudentWorld* swptr, int imageID, double startX, double startY, Direction dir = 0, int depth = 0, double size = 1.0)
+			: Actor(swptr, imageID, startX, startY, dir, depth, size)
+		{
 
+		}
+		//Considered Bacteria Interactables: Food and Socrates' Weapons
+		virtual bool isBacteriaInteractable() const
+		{
+			return true; 
+		}
+
+		//All of bacteria interactables can NOT be damaged! 
+		virtual bool canBeDamaged() const
+		{
+			return false; 
+		}
+
+		virtual ~BacteriaInteractable()
+		{
+
+		}
+	protected:
+	private: 
+	};
+		//////////////
+		//FOOD CLASS//
+		//////////////
+	class Food : public BacteriaInteractable
+	{
+	public: 
+		Food(StudentWorld* swptr, double startX, double startY)
+			:BacteriaInteractable(swptr, IID_FOOD, startX, startY, 90, 1)
+		{
+
+		}
+
+		//Food doesn't do anything. 
+		virtual void doSomething() {
+			return; 
+		}
+
+		//Food does nothing in itself when it overlaps with another.
+		//Such an action should be taken care of in the bacteria class. 
+		virtual void overlapAction(Actor* other)
+		{
+			return; 
+		}
+	private:
+		};
 #endif // ACTOR_H_

@@ -29,7 +29,7 @@ private:
     Socrates* m_socrates; 
 
     //Avoids placement in areas where not allowed. 
-    void StudentWorld::validPlacement(int& x, int& y);
+    void validPlacement(int& x, int& y);
 
     //Chooses random areas to place an object, given certain bounds (but not exact enough bounds)
     //Helper function for my helper function
@@ -43,6 +43,9 @@ private:
 
     //Converts ints into ostringstreams into the proper strings
     void outputString(int displayNum, int numDigits, std::string literal, std::string& display);
+    
+    //Checks if dirt/food/pits are being placed in incorrect positions. 
+    bool invalidOverlap(const Actor* current, const bool checkPit, const bool checkFood, const bool checkDirt) const;
 };
 
 #endif // STUDENTWORLD_H_
