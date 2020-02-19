@@ -18,7 +18,7 @@ public:
     virtual void cleanUp();
 
     //Returns a pointer to socrates
-    Actor* mySoc() const
+    Socrates* mySoc() const
     {
         return m_socrates; 
     }
@@ -26,7 +26,7 @@ public:
 
 private:
     std::list<Actor*> m_actors; 
-    Actor* m_socrates; 
+    Socrates* m_socrates; 
 
     //Avoids placement in areas where not allowed. 
     void StudentWorld::validPlacement(int& x, int& y);
@@ -37,8 +37,12 @@ private:
 
     //Returns angle between 2 points
     double angle(int x1, int y1, int x2, int y2);
-   // FIGURE OUT LATER void eraseSingle(list<Actor*>::iterator actorItr);
 
+    //Erases from list
+    std::list<Actor*>::iterator eraseSingle(std::list<Actor*>::iterator actorItr);
+
+    //Converts ints into ostringstreams into the proper strings
+    void outputString(int displayNum, int numDigits, std::string literal, std::string& display);
 };
 
 #endif // STUDENTWORLD_H_

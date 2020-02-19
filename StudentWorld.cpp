@@ -3,6 +3,8 @@
 #include "Actor.h"
 #include <string>
 #include <cmath>
+#include <sstream>
+#include <iomanip> 
 using namespace std;
 
 //Find better place for this function? 
@@ -21,6 +23,13 @@ StudentWorld::StudentWorld(string assetPath)
 int StudentWorld::init()
 {
     m_socrates = new Socrates(this); 
+
+    //TODO: INTIALIZE L PITS
+
+    //TODO: INITIALIZES MIN(5 * L, 25) FOOD
+    //CANNOT OVERLAP!!
+
+
     //INITIALIZING DIRT
     int numDirt = max(180 - 20 * getLevel(), 20); 
     for (int i = 0; i < numDirt; i++)
@@ -28,8 +37,8 @@ int StudentWorld::init()
         //DIRT CANNOT OVERLAP WITH FOOD OR PITS
         int x, y;
         validPlacement(x, y);
-        Dirt* z = new Dirt(this, x, y);
-        m_actors.push_back(z);
+        Dirt* newDirt = new Dirt(this, x, y);
+        m_actors.push_back(newDirt);
     }
     return GWSTATUS_CONTINUE_GAME;
 }
@@ -56,12 +65,101 @@ int StudentWorld::move()
             return GWSTATUS_PLAYER_DIED; 
         actorItr++; 
     }
-
-
-   
     
-    //TODO: Add new goodies
-    //TODO: Update status text 
+    //Add fungus
+    const double PI = 4 * atan(1); 
+    double chanceFungus = min(510 - getLevel() * 10, 200); 
+    int randFung = randInt(0, chanceFungus); 
+   
+    //Should we add a fungus this tick? 
+    if (randFung == 0)
+    {
+        int randomLife = max(rand() % (300 - 10 * getLevel()), 50);
+
+        //Pick a random angle for a random position
+        int randomAngle = randInt(0, 2 * PI); 
+        //Place a new fungus VIEW_RADIUS pixels from the center of the Petri dish.
+        Fungus* newFung = new Fungus(this, m_socrates, randomLife, 
+            VIEW_RADIUS + VIEW_RADIUS * cos(randomAngle),
+            VIEW_RADIUS + VIEW_RADIUS * sin(randomAngle)); 
+        m_actors.push_back(newFung); 
+    }
+
+    //Add goodies
+    double chanceGoodie = min(510 - getLevel() * 10, 250); 
+    int randGoodie = randInt(0, chanceGoodie); 
+
+    //Should we add a goodie this tick? 
+    if (randGoodie == 0)
+    {
+        const int spawnHP = 1; 
+        const int spawnFlame = 2; 
+        const int spawnLife = 3; 
+        //Pick a number from 0-100. This determines what goodie spawns! 
+        int RNG = randInt(0, 100);
+
+        //Other random variables to determine life and position of new goodie
+        int randomAngle = randInt(0, 2 * PI);
+        int randomLife = max(rand() % (300 - 10 * getLevel()), 50);
+
+        int choice;
+
+        if (RNG >= 0 && RNG < 60) //60% chance to be a restore health goodie
+            choice = spawnHP;
+        else if (RNG >= 60 && RNG < 90) // 30% chance to be a flame thrower goodie
+            choice = spawnFlame;
+        else //10% chance to be an extra-life goodie
+            choice = spawnLife; 
+        //Spawns in chosen goodie. 
+        switch (choice)
+        {
+        case spawnHP: 
+        {
+            ResHealth* newHP = new ResHealth(this, m_socrates, randomLife,
+                VIEW_RADIUS + VIEW_RADIUS * cos(randomAngle),
+                VIEW_RADIUS + VIEW_RADIUS * sin(randomAngle));
+            m_actors.push_back(newHP);
+        }
+            break;
+        case spawnFlame: 
+        {
+            ResFlame* newFlame = new ResFlame(this, m_socrates, randomLife,
+                VIEW_RADIUS + VIEW_RADIUS * cos(randomAngle),
+                VIEW_RADIUS + VIEW_RADIUS * sin(randomAngle));
+            m_actors.push_back(newFlame);
+        }
+            break; 
+        case spawnLife: 
+        {
+            ResLife* newLife = new ResLife(this, m_socrates, randomLife,
+                VIEW_RADIUS + VIEW_RADIUS * cos(randomAngle),
+                VIEW_RADIUS + VIEW_RADIUS * sin(randomAngle));
+            m_actors.push_back(newLife); 
+        }
+            break; 
+        }
+    }
+
+    //TODO: Update status text
+    //First gather information that must be displayed. 
+    int score = getScore(); 
+    int level = getLevel(); 
+    int lives = getLives(); 
+    int health = m_socrates->hp(); 
+    int spray = m_socrates->getSpray(); 
+    int flame = m_socrates->getFlame();
+
+    //Put everything into a string
+    string display;
+    outputString(score, 6, "Score: ", display);
+    outputString(level, 1, " Level: ", display); 
+    outputString(lives, 1, " Lives: ", display); 
+    outputString(health, 3, " Health: ", display); 
+    outputString(spray, 2, " Sprays: ", display); 
+    outputString(flame, 1, " Flame: ", display); 
+
+    //Now display it all on screen
+    setGameStatText(display); 
 
     //If actors are dead, remove them
     actorItr = m_actors.begin();
@@ -71,9 +169,7 @@ int StudentWorld::move()
         {
             //DUPLICATING CODE.... I WANT TO USE A FUNCTION BUT
             //HAVING TROUBLE PASSING IN AN ITERATOR TO A FUNCTION
-            delete(*actorItr);
-            *actorItr = nullptr;
-            actorItr = m_actors.erase(actorItr);
+            actorItr = eraseSingle(actorItr);
         }
         else
             actorItr++;
@@ -86,9 +182,7 @@ void StudentWorld::cleanUp()
     list<Actor*>::iterator actorItr = m_actors.begin();
     while (actorItr != m_actors.end())
     {
-        delete(*actorItr);
-        *actorItr = nullptr;
-        actorItr = m_actors.erase(actorItr);
+        actorItr = eraseSingle(actorItr);
     }
 }
 
@@ -100,15 +194,16 @@ StudentWorld::~StudentWorld()
 ////////////////////////////
 //PRIVATE HELPER FUNCTIONS//
 ////////////////////////////
-/* FIGUIRE OUT LATER
+//FIGUIRE OUT LATER
 //Correctly erases a single actor from the game. 
-void StudentWorld::eraseSingle(list<Actor*>::iterator actorItr)
+list<Actor*>::iterator StudentWorld::eraseSingle(list<Actor*>::iterator actorItr)
 {
     delete(*actorItr); 
     *actorItr = nullptr;
     actorItr = m_actors.erase(actorItr); 
+    return actorItr; 
 }
-*/ 
+
 //Useful for placing objects on the screen. Will avoid placement in areas where not allowed. 
 int StudentWorld::placeWithConstraint(const int& lconstraint, const int& uconstraint, const int& randUpper)
 {
@@ -170,4 +265,14 @@ void StudentWorld::validPlacement(int& x, int& y)
 
 
     } while (coordRadius > outerRadius);
+}
+
+void StudentWorld::outputString(int displayNum, int numDigits, string literal, string& display)
+{
+    ostringstream oss_displayNext;
+    oss_displayNext.fill('0'); //Fills remainder with 0s
+    oss_displayNext << setw(numDigits) << displayNum; 
+    //Append necessary information to end of string
+    display += literal;
+    display += oss_displayNext.str();
 }

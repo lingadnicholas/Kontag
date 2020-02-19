@@ -134,6 +134,10 @@ private:
 		virtual void takeDamage(const int& amt)
 		{
 			m_health -= amt;
+			if (m_health < 0)
+				m_health = 0;
+			if (m_health > 100)
+				m_health = 100; //Socrates is the only LivingWithHp that can heal, so this is ok. 
 		}
 
 		//Returns current health 
@@ -157,7 +161,7 @@ private:
 		{
 		public:
 			Socrates(StudentWorld* swptr)
-				:LivingWithHP(swptr, m_maxHP, IID_PLAYER, 0, VIEW_HEIGHT/2, 0, 0)
+				:LivingWithHP(swptr, 100, IID_PLAYER, 0, VIEW_HEIGHT/2, 0, 0)
 			{
 			}
 			//Socrates performs actions based on player input
@@ -193,6 +197,17 @@ private:
 				return m_maxHP; 
 			}
 
+			//Returns flamethrower charges
+			int getFlame() const
+			{
+				return m_flameCharges; 
+			}
+
+			//Returns spray charges
+			int getSpray() const
+			{
+				return m_sprayCharges; 
+			}
 		protected: 
 			//TODO: Incomplete, but needs to be here to not be pure virtual. 
 			virtual void overlapAction(Actor* other)
@@ -247,7 +262,7 @@ private:
 
 	protected: 
 		//Will all interact with Socrates in some way. 
-		virtual void overlapAction(const Actor* other) = 0;
+		virtual void overlapAction(Actor* other) = 0;
 		//Determines if goodie overlaps with Socrates. 
 		bool socOverlap() const;
 		void killIfDead(); 
@@ -306,9 +321,9 @@ private:
 		private:
 		};
 
-		///////////////////////////
-		//EXTRA LIFE GOODIE CLASS//
-		///////////////////////////
+		////////////////
+		//FUNGUS CLASS//
+		////////////////
 		class Fungus : public Pickups
 		{
 		public:
