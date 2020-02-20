@@ -9,7 +9,6 @@ class Socrates;
 /*
 For a class to NOT be pure virtual.. you must define
 doSomething()
-overlapAction()
 
 here is a template for a non-abstract class:
 class derivedClass : public baseClass
@@ -70,13 +69,9 @@ public:
 	{
 		return false; 
 	}
-	//Can't find common functionalities of dirts and pits.. so they get their own
-	virtual bool isPit() const
-	{
-		return false;
-	}
 
-	virtual bool isDirt() const
+	//Most objects don't block other objects. 
+	virtual bool blockOtherObjects() const
 	{
 		return false;
 	}
@@ -94,7 +89,11 @@ public:
 		return m_alive;
 	}
 
-
+	//Allows units with HP to take damage (or heal!) Should do nothing here.
+	virtual void takeDamage(const int& amt)
+	{
+		return; 
+	}
 	virtual ~Actor()
 	{
 
@@ -111,12 +110,15 @@ public:
 
 	//PUBLIC HELPER FUNCTIONS (StudentWorld uses these too..)
 	double radialDistance(const Actor* first, const Actor* second) const;
+	double  radialDistance(const double& x, const double& y) const;
 	bool overlaps(const Actor* first, const Actor* second) const;
+	bool overlaps(const double& x, const double& y) const;
 protected:
-
-	//Pure virtual:
 	//Protected, because only used by objects derived from this class. 
-	virtual void overlapAction(Actor* other) = 0;
+	virtual void overlapAction(Actor* other)
+	{
+		return; 
+	}
 
 private: 
 	bool m_alive;
@@ -141,19 +143,20 @@ private:
 			return; //Dirt can't do anything! 
 		}
 
-		virtual bool isDirt()
+		//Dirt blocks other objects
+		virtual bool blocksOtherObjects()
 		{
 			return true;
 		}
-		//Dirt is set to dead if it comes into contact with spray or flame. 
-		virtual void overlapAction(Actor* other);
+
 
 		//Returns true if the dirt should block the other object (if it gets too close!) 
 		bool blockObjects(const Actor* other);
 
-		
+	protected:
+		//Dirt is set to dead if it comes into contact with spray or flame. 
+		virtual void overlapAction(Actor* other);
 
-	
 	private: 
 	};
 
@@ -175,27 +178,24 @@ private:
 			return true;
 		}
 
-		//Allows units with HP to take damage (or heal!) 
-		virtual void takeDamage(const int& amt)
-		{
-			m_health -= amt;
-			if (m_health <= 0)
-			{
-				m_health = 0; //Set to 0 for display purposes
-				kill(); 
-			}
-			if (m_health > 100)
-				m_health = 100; //Socrates is the only LivingWithHp that can heal, so this is ok. 
-		}
-
-
 		//Returns current health 
 		int hp() const 
 		{
 			return m_health; 
 		}
 
-	
+		//If an object has HP, then it can take damage. (Or heal) 
+		virtual void takeDamage(int amt) {
+			m_health -= amt;
+			if (m_health <= 0)
+			{
+				m_health = 0; //Set to 0 for display purposes
+				kill();
+			}
+			if (m_health > 100)
+				m_health = 100; //Socrates is the only LivingWithHp that can heal, so this is ok. 
+		}
+
 		virtual ~LivingWithHP()
 		{
 
@@ -434,12 +434,147 @@ private:
 			return; 
 		}
 
+	protected: 
 		//Food does nothing in itself when it overlaps with another.
 		//Such an action should be taken care of in the bacteria class. 
 		virtual void overlapAction(Actor* other)
 		{
-			return; 
+			return;
 		}
 	private:
 		};
+			/////////////////
+			//WEAPONS CLASS//
+			/////////////////
+			class Weapons : public BacteriaInteractable
+			{
+			public:
+				//TODO: THIS CLASS SHOULD BE PURE VIRTUAL. BUT I DEFINE DOSOMETHING()
+				Weapons(StudentWorld* swptr, int imageID, double startX, double startY, Direction dir, int maxTravelDist, int damageAmt )
+					: BacteriaInteractable(swptr, imageID, startX, startY, dir), m_originalX(startX), 
+					m_originalY(startY), m_maxTravelDist(maxTravelDist), m_damageAmt(damageAmt)
+				{
+
+				}
+				//Weapons are all used by Socrates. 
+				virtual bool usedBySocrates() const
+				{
+					return true; 
+				}
+
+				virtual void doSomething();
+
+				virtual ~Weapons()
+				{
+
+				}
+			protected:
+				//A weapon's overlap action will check if it overlaps with a damageable object
+				//And then damage it. 
+				virtual void overlapAction(Actor* other);
+
+				//Checks if a weapon has reached its max travel distandce. 
+				bool checkMaxDist() const
+				{
+					if (radialDistance(m_originalX, m_originalY) >= m_maxTravelDist)
+						return true;
+					else
+						return false; 
+				}
+			private: 
+				double m_maxTravelDist; 
+				int m_damageAmt; 
+				double m_originalX;
+				double m_originalY; 
+			};
+
+				///////////////
+				//FLAME CLASS//
+				///////////////
+				class Flame : public Weapons
+				{
+				public: 
+					Flame(StudentWorld* swptr, double startX, double startY, Direction dir, int maxTravelDist, int damageAmt) 
+						: Weapons(swptr, IID_FLAME, startX, startY, dir, maxTravelDist, damageAmt)
+					{
+					}
+				private:
+				};
+
+				///////////////
+				//SPRAY CLASS//
+				///////////////
+				class Spray : public Weapons
+				{
+				public:
+					Spray(StudentWorld* swptr, double startX, double startY, Direction dir, int maxTravelDist, int damageAmt)
+						: Weapons(swptr, IID_SPRAY, startX, startY, dir, maxTravelDist, damageAmt)
+					{
+					}
+				private:
+				};
+	/////////////
+	//PIT CLASS//
+	/////////////
+	class Pit : public Actor
+	{
+	public:
+		Pit(StudentWorld* swptr, double startX, double startY)
+			: m_numRegSalmon(5), m_numAggSalmon(3), m_numEColi(2), Actor(swptr, IID_PIT, startX, startY, 0, 1)
+		{
+
+		}
+		//How to classify a pit: can't be damaged, doesn't block other objects. 
+		virtual bool canBeDamaged() const
+		{
+			return false; 
+		}
+
+		void decrementRegSalmon()
+		{
+			m_numRegSalmon--; 
+		}
+
+		void decrementAggSalmon()
+		{
+			m_numAggSalmon--; 
+		}
+
+		void decrementNumEColi()
+		{
+			m_numEColi--; 
+		}
+
+		bool anyRegSalmon() const
+		{
+			if (m_numRegSalmon > 0)
+				return true;
+			return false; 
+		}
+
+		bool anyAggSalmon() const
+		{
+			if (m_numAggSalmon > 0)
+				return true;
+			return false;
+		}
+
+		bool anyEColi() const
+		{
+			if (m_numEColi > 0)
+				return true;
+			return false;
+		}
+
+		virtual void doSomething(); 
+
+
+	protected:
+
+	private: 
+		int m_numRegSalmon;
+		int m_numAggSalmon;
+		int m_numEColi; 
+	};
+
 #endif // ACTOR_H_

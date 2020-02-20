@@ -23,36 +23,43 @@ StudentWorld::StudentWorld(string assetPath)
 int StudentWorld::init()
 {
     m_socrates = new Socrates(this); 
+
     //TODO: INTIALIZE L PITS
+    int numPits = getLevel(); 
+    for (int i = 0; i < numPits; i++)
+    {
+        double x, y; 
+        do {
+            validPlacement(x, y);
+        } while (invalidOverlap(x, y, true, false, false)); //Pits cannot overlap with other pits. 
 
-    //TODO: INITIALIZES MIN(5 * L, 25) FOOD
-    //CANNOT OVERLAP!!
-    //Place object. Check all dirt/pits.
-    //If it is dirt or pit. 
-    //Place it somewhere else (call validPlacement again) until it's not a dirt or pit. 
-
-    /*
+        Pit* newPit = new Pit(this, x, y); 
+        m_actors.push_back(newPit); 
+    }
+    //INITIALIZE FOOD
     int numFood = min(5 * getLevel(), 25); 
     for (int i = 0; i < numFood; i++)
     {
-        int x, y; 
+        double x, y; 
         do {
-            validPlacement(x, y)
-        } while (); 
+            validPlacement(x, y);
+        } while (invalidOverlap(x, y, true, true, false)); //Food can overlap with existing dirt (but no dirt exists yet) but not other food or pits.
+
+        Food* newFood = new Food(this, x, y);
+        m_actors.push_back(newFood);
     }
-    */ 
-    //TODO: write a function that takes in an Actor, checks if 
-    // its position is or isn't overlapping with a dirt, food, or pit
-    //Maybe something like:
-    // bool invalidOverlap(const Actor* current, const bool checkPit, const bool checkFood, const bool checkDirt) const;
+   
 
     //INITIALIZING DIRT
     int numDirt = max(180 - 20 * getLevel(), 20); 
     for (int i = 0; i < numDirt; i++)
     {
         //TODO: DIRT CANNOT OVERLAP WITH FOOD OR PITS
-        int x, y;
-        validPlacement(x, y);
+        double x, y;
+        do {
+            validPlacement(x, y);
+        } while (invalidOverlap(x, y, true, true, false)); //Dirt can overlap with existing dirt but not existing food or pits 
+
         Dirt* newDirt = new Dirt(this, x, y);
         m_actors.push_back(newDirt);
     }
@@ -87,7 +94,7 @@ int StudentWorld::move()
     
     //Add fungus
     const double PI = 4 * atan(1); 
-    double chanceFungus = min(510 - getLevel() * 10, 200); 
+    int chanceFungus = min(510 - getLevel() * 10, 200); 
     int randFung = randInt(0, chanceFungus); 
    
     //Should we add a fungus this tick? 
@@ -96,7 +103,7 @@ int StudentWorld::move()
         int randomLife = max(rand() % (300 - 10 * getLevel()), 50);
 
         //Pick a random angle for a random position
-        int randomAngle = randInt(0, 2 * PI); 
+        double randomAngle = randInt(0, 2 * PI); 
         //Place a new fungus VIEW_RADIUS pixels from the center of the Petri dish.
         Fungus* newFung = new Fungus(this, m_socrates, randomLife, 
             VIEW_RADIUS + VIEW_RADIUS * cos(randomAngle),
@@ -105,7 +112,7 @@ int StudentWorld::move()
     }
 
     //Add goodies
-    double chanceGoodie = min(510 - getLevel() * 10, 250); 
+    int chanceGoodie = min(510 - getLevel() * 10, 250); 
     int randGoodie = randInt(0, chanceGoodie); 
 
     //Should we add a goodie this tick? 
@@ -221,7 +228,7 @@ list<Actor*>::iterator StudentWorld::eraseSingle(list<Actor*>::iterator actorItr
 }
 
 //Useful for placing objects on the screen. Will avoid placement in areas where not allowed. 
-int StudentWorld::placeWithConstraint(const int& lconstraint, const int& uconstraint, const int& randUpper)
+int StudentWorld::placeWithConstraint(const double& lconstraint, const double& uconstraint, const double& randUpper)
 {
     int coord; 
     do
@@ -234,7 +241,7 @@ int StudentWorld::placeWithConstraint(const int& lconstraint, const int& uconstr
 
 //Returns angle between point 1 and point 2
 //Point 2 should be the center of the circle (VIEW_RADIUS, VIEW_RADIUS) 
-double StudentWorld::angle(int x1, int y1, int x2, int y2)
+double StudentWorld::angle(const double& x1, const double& y1, const double& x2, const double& y2) const
 {
     const double PI = 4 * atan(1);
     double y = y1 - y2;
@@ -245,7 +252,7 @@ double StudentWorld::angle(int x1, int y1, int x2, int y2)
     return atan(val) * 180 / PI;
 }
 
-void StudentWorld::validPlacement(int& x, int& y)
+void StudentWorld::validPlacement(double& x, double& y)
 {
     const double OUTER = 120;
     double coordRadius, outerRadius, xlen, ylen, outerxlen, outerylen;
@@ -304,32 +311,32 @@ void StudentWorld::outputString(int displayNum, int numDigits, string literal, s
 //Return true if overlap is not allowed to happen 
 //Return false otherwise. 
 //TODO: IMPLEMENT THIS FUNCTION INTO SPAWNING YOUR FOOD!
-bool StudentWorld::invalidOverlap(const Actor* current, const bool checkPit, const bool checkFood, const bool checkDirt) const
+bool StudentWorld::invalidOverlap(const double& x, const double& y, const bool checkPit, const bool checkFood, const bool checkDirt) const
 {
     list<Actor*>::const_iterator actorItr = m_actors.begin();
     while (actorItr != m_actors.end())
     {
         if (checkPit)
         {
-            if ((*actorItr)->isPit())
+            if (!(*actorItr)->canBeDamaged() && !(*actorItr)->blockOtherObjects()) //Identify if the actor is a pit
             {
-                if (current->Actor::overlaps(current, *(actorItr)))
+                if ((*actorItr)->overlaps(x, y))
                     return true; 
             }
         }
         if (checkFood)
         {
-            if ((*actorItr)->isBacteriaInteractable() && !(*actorItr)->usedBySocrates())
+            if ((*actorItr)->isBacteriaInteractable() && !(*actorItr)->usedBySocrates()) //Identify if the actor is food
             {
-                if (current->Actor::overlaps(current, *(actorItr)))
+                if ((*actorItr)->overlaps(x, y))
                     return true; 
             }
         }
         if (checkDirt)
         {
-            if ((*actorItr)->isDirt())
+            if ((*actorItr)->canBeDamaged() && (*actorItr)->blockOtherObjects()) //Identify if the actor is dirt.
             {
-                if (current->Actor::overlaps(current, *(actorItr)))
+                if ((*actorItr)->overlaps(x, y))
                     return true;
             }
         }

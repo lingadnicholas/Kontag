@@ -18,6 +18,15 @@ double Actor::radialDistance(const Actor* first, const Actor* second) const
 	double yDist = secondy - firsty;
 	return sqrt(xDist * xDist + yDist * yDist);
 }
+
+double Actor::radialDistance(const double& x, const double& y) const
+{
+	double thisX = getX(), thisY = getY(); 
+	double xDist = x - thisX; 
+	double yDist = y - thisY; 
+	return sqrt(xDist * xDist + yDist * yDist); 
+}
+
 ////////////////////////////////////
 //ACTOR PROTECTED HELPER FUNCTIONS//
 ////////////////////////////////////
@@ -29,6 +38,14 @@ bool Actor::overlaps(const Actor* first, const Actor* second) const
 		return true;
 	return false;
 }
+
+bool Actor::overlaps(const double& x, const double& y) const
+{
+	if (radialDistance(x, y) <= 2.0 * SPRITE_RADIUS)
+		return true; 
+	return false; 
+}
+
 
 //////////////
 //DIRT CLASS//
@@ -186,3 +203,91 @@ void Fungus::overlapAction(Actor* other)
 	kill();
 	mySoc()->takeDamage(20); 
 }
+
+/////////////
+//PIT CLASS//
+/////////////
+void Pit::doSomething()
+{
+	if (!anyRegSalmon() && !anyAggSalmon() && !anyEColi())
+	{
+		kill(); 
+		return; 
+	}
+	//TODO: ADD AN IF STATEMENT TO STUDENTWORLD. IF IT'S KILLING A PIT, DECREMENT # OF PITS LEFT! 
+
+	int RNG = randInt(0, 49); //1 in 50 chance
+	const int regSalmon = 1; 
+	const int aggSalmon = 2; 
+	const int eColi = 3; 
+	if (RNG == 0)
+	{
+		int whichOne; 
+		//Randomly picks a bacteria to spawn, if it is available to spawn. 
+		for (;;)
+		{
+			bool shouldBreak = false; 
+			whichOne = randInt(1, 3); 
+			switch (whichOne)
+			{
+			case regSalmon: 
+			{
+				if (anyRegSalmon())
+				{
+					shouldBreak = true; 
+					//TODO: Then spawn salmon...
+					m_numRegSalmon--; 
+					myWorld()->playSound(SOUND_BACTERIUM_BORN); 
+				}
+			}
+				break; 
+			case aggSalmon:
+			{
+				if (anyAggSalmon())
+				{
+					shouldBreak = true;
+					//TODO: Then spawn agg salmon..
+					m_numAggSalmon--; 
+					myWorld()->playSound(SOUND_BACTERIUM_BORN);
+				}
+			}
+				break;
+			case eColi:
+			{
+				if (anyEColi())
+				{
+					shouldBreak = true;
+					//TODO: Then spawn ecoli salmon..
+					m_numEColi--; 
+					myWorld()->playSound(SOUND_BACTERIUM_BORN);
+				}
+			}
+				break; 
+			}
+			if (shouldBreak)
+				break; 
+		}
+	}
+
+}
+
+/////////////////
+//WEAPONS CLASS//
+/////////////////
+void Weapons::overlapAction(Actor* other)
+{
+	if (other->canBeDamaged())
+	{
+		if (other->hasHP())
+			other->takeDamage(m_damageAmt);
+		else //Objects that can be damaged, but don't have HP, die immediately upon contact. 
+			other->kill(); 
+		kill(); //this weapon also dies upon damaging another. 
+	}
+}
+
+void Weapons::doSomething()
+{
+	myWorld()->//maybe use the socOverlap concept from your pickups class. but make it a damageableObject overlap. 
+}
+

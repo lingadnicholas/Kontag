@@ -29,14 +29,14 @@ private:
     Socrates* m_socrates; 
 
     //Avoids placement in areas where not allowed. 
-    void validPlacement(int& x, int& y);
+    void validPlacement(double& x, double& y);
 
     //Chooses random areas to place an object, given certain bounds (but not exact enough bounds)
     //Helper function for my helper function
-    int placeWithConstraint(const int& lconstraint, const int& uconstraint, const int& randUpper);
+    int placeWithConstraint(const double& lconstraint, const double& uconstraint, const double& randUpper);
 
     //Returns angle between 2 points
-    double angle(int x1, int y1, int x2, int y2);
+    double angle(const double& x1, const double& y1, const double& x2, const double& y2) const;
 
     //Erases from list
     std::list<Actor*>::iterator eraseSingle(std::list<Actor*>::iterator actorItr);
@@ -45,7 +45,7 @@ private:
     void outputString(int displayNum, int numDigits, std::string literal, std::string& display);
     
     //Checks if dirt/food/pits are being placed in incorrect positions. 
-    bool invalidOverlap(const Actor* current, const bool checkPit, const bool checkFood, const bool checkDirt) const;
+    bool invalidOverlap(const double& x, const double& y, const bool checkPit, const bool checkFood, const bool checkDirt) const;
 };
 
 #endif // STUDENTWORLD_H_
