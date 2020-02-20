@@ -4,8 +4,8 @@
 #include "GameWorld.h"
 #include <string>
 #include <list>
+#include "Actor.h"
 
-class Actor;
 class Socrates;
 // Students:  Add code to this file, StudentWorld.cpp, Actor.h, and Actor.cpp
 
@@ -22,11 +22,31 @@ public:
     {
         return m_socrates; 
     }
+
+    //Allows Socrates to add weapons or bacteria from outside of the class. 
+    void StudentWorld::addActor(const int& type, const double& x, const double& y, const Direction& dir);
+
+    //Returns an iterator to the beginning of the actors list
+    std::list<Actor*>::iterator myActorsItr() {
+        return m_actors.begin(); 
+    }
+
+    //Returns an iterator to the end of the actors list
+    std::list<Actor*>::iterator myActorsEnd() {
+        return m_actors.end();
+    }
+    //Returns the m_actors list. 
+    std::list<Actor*> myActors() {
+        return m_actors; 
+    }
+    
     ~StudentWorld(); 
 
 private:
     std::list<Actor*> m_actors; 
     Socrates* m_socrates; 
+    int m_nBacteria;
+    int m_nPits;
 
     //Avoids placement in areas where not allowed. 
     void validPlacement(double& x, double& y);

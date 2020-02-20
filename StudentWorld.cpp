@@ -24,8 +24,10 @@ int StudentWorld::init()
 {
     m_socrates = new Socrates(this); 
 
-    //TODO: INTIALIZE L PITS
+    //INTIALIZE L PITS
     int numPits = getLevel(); 
+    m_nBacteria = numPits * 11; 
+    m_nPits = numPits; 
     for (int i = 0; i < numPits; i++)
     {
         double x, y; 
@@ -36,6 +38,7 @@ int StudentWorld::init()
         Pit* newPit = new Pit(this, x, y); 
         m_actors.push_back(newPit); 
     }
+
     //INITIALIZE FOOD
     int numFood = min(5 * getLevel(), 25); 
     for (int i = 0; i < numFood; i++)
@@ -52,9 +55,8 @@ int StudentWorld::init()
 
     //INITIALIZING DIRT
     int numDirt = max(180 - 20 * getLevel(), 20); 
-    for (int i = 0; i < numDirt; i++)
+    for (int i = 0; i < numDirt; i++) 
     {
-        //TODO: DIRT CANNOT OVERLAP WITH FOOD OR PITS
         double x, y;
         do {
             validPlacement(x, y);
@@ -192,10 +194,23 @@ int StudentWorld::move()
     {
         if (!(*actorItr)->alive())
         {
+            if ((*actorItr)->canDamageSocrates() && !(*actorItr)->canPickUp()) //If bacteria
+            {
+                m_nBacteria--; 
+            }
+            else if (!(*actorItr)->canBeDamaged() && !(*actorItr)->blockOtherObjects())
+            {
+                m_nPits--; 
+            }
             actorItr = eraseSingle(actorItr);
         }
         else
             actorItr++;
+    }
+
+    if (m_nPits == 0 && m_nBacteria == 0)
+    {
+        return GWSTATUS_FINISHED_LEVEL; 
     }
     return GWSTATUS_CONTINUE_GAME;
 }
@@ -220,7 +235,7 @@ StudentWorld::~StudentWorld()
 //FIGUIRE OUT LATER
 //Correctly erases a single actor from the game. 
 list<Actor*>::iterator StudentWorld::eraseSingle(list<Actor*>::iterator actorItr)
-{
+ {
     delete(*actorItr); 
     *actorItr = nullptr;
     actorItr = m_actors.erase(actorItr); 
@@ -343,4 +358,39 @@ bool StudentWorld::invalidOverlap(const double& x, const double& y, const bool c
         actorItr++; 
     }
     return false; 
+}
+
+void StudentWorld::addActor(const int& type, const double& x, const double& y, const Direction& dir)
+{
+    if (type == 0) //Push spray
+    {
+        Spray* newSpray = new Spray(this, x, y, dir);
+        m_actors.push_back(newSpray);
+    }
+    else if (type == 1) //Push flame
+    {
+        Flame* newFlame = new Flame(this, x, y, dir);
+        m_actors.push_back(newFlame);
+    }
+    else if (type == 2) //Push Salmonella 
+    {
+        Salmonella* newSalmon = new Salmonella(this, x, y); 
+        m_actors.push_back(newSalmon); 
+    }
+    else if (type == 3) //Push aggressive salmonella 
+    {
+        AggroSalmonella* newAggro = new AggroSalmonella(this, x, y); 
+        m_actors.push_back(newAggro); 
+    }
+    else if (type == 4) //Push ecoli
+    {
+        EColi* newEcoli = new EColi(this, x, y);
+        m_actors.push_back(newEcoli); 
+    }
+    else
+    {
+        Food* newFood = new Food(this, x, y);
+        m_actors.push_back(newFood);
+    }
+        return;
 }

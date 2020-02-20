@@ -64,12 +64,18 @@ public:
 		return false; 
 	}
 
+
 	//Most objects are not bacteria interactables
 	virtual bool isBacteriaInteractable() const
 	{
 		return false; 
 	}
 
+	//Most objects do not damage socrates
+	virtual bool canDamageSocrates() const
+	{
+		return false;
+	}
 	//Most objects don't block other objects. 
 	virtual bool blockOtherObjects() const
 	{
@@ -94,6 +100,16 @@ public:
 	{
 		return; 
 	}
+
+	//aggro + ecoli chase socrates. regular doesnt
+	virtual bool chasesSocrates() const {
+		return false; 
+	}
+
+	virtual bool canPickUp() const
+	{
+		return false;
+	}
 	virtual ~Actor()
 	{
 
@@ -111,8 +127,10 @@ public:
 	//PUBLIC HELPER FUNCTIONS (StudentWorld uses these too..)
 	double radialDistance(const Actor* first, const Actor* second) const;
 	double  radialDistance(const double& x, const double& y) const;
+	double radialDistance(const Actor* first, const double& x, const double& y) const;
 	bool overlaps(const Actor* first, const Actor* second) const;
 	bool overlaps(const double& x, const double& y) const;
+	bool overlaps(const Actor* first, const double& x, const double& y) const;
 protected:
 	//Protected, because only used by objects derived from this class. 
 	virtual void overlapAction(Actor* other)
@@ -143,8 +161,9 @@ private:
 			return; //Dirt can't do anything! 
 		}
 
+		
 		//Dirt blocks other objects
-		virtual bool blocksOtherObjects()
+		virtual bool blockOtherObjects() const
 		{
 			return true;
 		}
@@ -177,24 +196,14 @@ private:
 		{
 			return true;
 		}
-
-		//Returns current health 
-		int hp() const 
+		int hp() const
 		{
-			return m_health; 
+			return m_health;
 		}
+
 
 		//If an object has HP, then it can take damage. (Or heal) 
-		virtual void takeDamage(int amt) {
-			m_health -= amt;
-			if (m_health <= 0)
-			{
-				m_health = 0; //Set to 0 for display purposes
-				kill();
-			}
-			if (m_health > 100)
-				m_health = 100; //Socrates is the only LivingWithHp that can heal, so this is ok. 
-		}
+		virtual void takeDamage(const int& amt);
 
 		virtual ~LivingWithHP()
 		{
@@ -228,6 +237,8 @@ private:
 			void updateFlame(int amt)
 			{
 				m_flameCharges += amt;
+				if (m_flameCharges > 5)
+					m_flameCharges = 5;
 			}
 
 			//Gets current angle so Socrates can move. 
@@ -266,13 +277,150 @@ private:
 				//This actually may not need to do anything.. but not 100% sure
 			}
 		private: 
-			int m_sprayCharges = 20; 
-			int m_flameCharges = 5; 
+			int m_sprayCharges = 20;
+			int m_flameCharges = 5;
 			int m_positionAngle = 180; 
 			int m_maxHP = 100; 
 			void changePosition(int dir); 
 		};
 
+		//////////////////
+		//BACTERIA CLASS//
+		//////////////////
+		class Bacteria : public LivingWithHP
+		{
+		public:
+			Bacteria(StudentWorld* swptr, int HP, int imageID, int dmg, int type, int movePixels, double startX, double startY)
+				: LivingWithHP(swptr, HP, imageID, startX, startY), m_dmgAmt(dmg), m_type(type), m_movePixels(movePixels)
+			{
+				
+			}
+
+			//Both types of salmonella share a similar doSomething. But a fungus will be different.
+			virtual void doSomething() = 0; 
+
+			//All types of bacteria have a very similar overlapAction (damage Socrates)
+			virtual void overlapAction(Actor* other); 
+
+			virtual bool canDamageSocrates() const {
+				return true; 
+			}
+
+			//Bacteria do be getting stuck on dirt tho 
+			virtual bool blockedByDirt() const
+			{
+				return true;
+			}
+
+			virtual bool hasHP() const
+			{
+				return true; 
+			}
+
+			virtual ~Bacteria()
+			{
+
+			}
+		protected: 
+			int foodEaten() const
+			{
+				return m_foodEaten; 
+			}
+
+			void spawnSelf();
+
+			void resetFood()
+			{
+				m_foodEaten = 0;
+			}
+
+			int getMPD() const
+			{
+				return m_MPD; 
+			}
+
+			void increaseMPD() {
+				m_MPD++; 
+			}
+
+			void resetMPD()
+			{
+				m_MPD = 0; 
+			}
+
+			//Can check against different types if it overlaps. 
+			void overlapsFood();
+
+			void failedToMove();
+			bool movementPlanDistance(); 
+
+			//Gets location of closest food
+			bool getClosestFood();
+
+			//Checks if location is inside circle
+			bool insideCircle(double& newX, double& newY);
+
+			bool findSocrates(int dist);
+
+			void checkFood(); 
+		private: 
+			int m_dmgAmt; 
+			int m_MPD = 0; //movement plan distance 
+			int m_foodEaten = 0; 
+			int m_type; //Type 3 = salmonella, 4 aggro, 5 ecoli
+			int m_movePixels; //How many pixels obj moves
+		};
+
+		class Salmonella : public Bacteria
+		{
+		public: 
+			Salmonella(StudentWorld* swptr, double startX, double startY, int HP = 4, int dmg = 1, int type = 3)
+				: Bacteria(swptr, HP, IID_SALMONELLA, dmg, type, 3 ,startX, startY)
+			{
+
+			}
+
+			virtual void doSomething(); 
+
+			virtual ~Salmonella()
+			{
+
+			}
+		};
+
+		class AggroSalmonella : public Salmonella
+		{
+		public: 
+			AggroSalmonella(StudentWorld* swptr, double startX, double startY)
+				: Salmonella(swptr, startX, startY, 10, 2, 4)
+			{
+
+			}
+			virtual bool chasesSocrates() const
+			{
+				return true; 
+			}
+			virtual void doSomething();
+
+		private: 
+		};
+
+		class EColi : public Bacteria
+		{
+		public: 
+			EColi(StudentWorld* swptr, double startX, double startY, int HP = 5, int dmg = 4, int type = 5)
+				: Bacteria(swptr, HP, IID_ECOLI, dmg, type, 3, startX, startY)
+			{
+
+			}
+
+			virtual bool chasesSocrates() const
+			{
+				return true; 
+			}
+
+			virtual void doSomething();
+		};
 	/////////////////
 	//PICKUPS CLASS//
 	/////////////////
@@ -300,6 +448,11 @@ private:
 
 		//All of these actors can be damaged!
 		virtual bool canBeDamaged() const
+		{
+			return true;
+		}
+
+		virtual bool canPickUp() const
 		{
 			return true;
 		}
@@ -382,6 +535,11 @@ private:
 			{
 
 			}
+
+			virtual bool canDamageSocrates() const
+			{
+				return true; 
+			}
 		protected:
 			virtual void overlapAction(Actor* other);
 		private:
@@ -409,6 +567,7 @@ private:
 		{
 			return false; 
 		}
+
 
 		virtual ~BacteriaInteractable()
 		{
@@ -462,6 +621,9 @@ private:
 					return true; 
 				}
 
+				//Flames and sprays will try to attack an overlapping object if it can
+				//And then move forward SPRITE_RADIUS*2 pixels 
+				//Dissipiate if it reaches its max travel distance. 
 				virtual void doSomething();
 
 				virtual ~Weapons()
@@ -494,8 +656,8 @@ private:
 				class Flame : public Weapons
 				{
 				public: 
-					Flame(StudentWorld* swptr, double startX, double startY, Direction dir, int maxTravelDist, int damageAmt) 
-						: Weapons(swptr, IID_FLAME, startX, startY, dir, maxTravelDist, damageAmt)
+					Flame(StudentWorld* swptr, double startX, double startY, Direction dir) 
+						: Weapons(swptr, IID_FLAME, startX, startY, dir, 32, 5)
 					{
 					}
 				private:
@@ -507,8 +669,8 @@ private:
 				class Spray : public Weapons
 				{
 				public:
-					Spray(StudentWorld* swptr, double startX, double startY, Direction dir, int maxTravelDist, int damageAmt)
-						: Weapons(swptr, IID_SPRAY, startX, startY, dir, maxTravelDist, damageAmt)
+					Spray(StudentWorld* swptr, double startX, double startY, Direction dir)
+						: Weapons(swptr, IID_SPRAY, startX, startY, dir, 112, 2)
 					{
 					}
 				private:
