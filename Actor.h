@@ -82,6 +82,11 @@ public:
 		return false;
 	}
 
+	//Most types of bacteria are salmonella. a few are not. 
+	virtual bool isSalmon() const
+	{
+		return false; 
+	}
 	//Other public member functions:
 	//Sets alive status to false 
 	void kill()
@@ -290,8 +295,8 @@ private:
 		class Bacteria : public LivingWithHP
 		{
 		public:
-			Bacteria(StudentWorld* swptr, int HP, int imageID, int dmg, int type, int movePixels, double startX, double startY)
-				: LivingWithHP(swptr, HP, imageID, startX, startY), m_dmgAmt(dmg), m_type(type), m_movePixels(movePixels)
+			Bacteria(StudentWorld* swptr, int HP, int imageID, int dmg, int movePixels, double startX, double startY)
+				: LivingWithHP(swptr, HP, imageID, startX, startY), m_dmgAmt(dmg), m_movePixels(movePixels)
 			{
 				
 			}
@@ -363,25 +368,31 @@ private:
 			bool findSocrates(int dist);
 
 			void checkFood(); 
+
+			double angleInDeg(const double& otherx, const double& othery); 
 		private: 
 			int m_dmgAmt; 
 			int m_MPD = 0; //movement plan distance 
 			int m_foodEaten = 0; 
-			int m_type; //Type 3 = salmonella, 4 aggro, 5 ecoli
 			int m_movePixels; //How many pixels obj moves
 		};
 
 		class Salmonella : public Bacteria
 		{
 		public: 
-			Salmonella(StudentWorld* swptr, double startX, double startY, int HP = 4, int dmg = 1, int type = 3)
-				: Bacteria(swptr, HP, IID_SALMONELLA, dmg, type, 3 ,startX, startY)
+			Salmonella(StudentWorld* swptr, double startX, double startY, int HP = 4, int dmg = 1)
+				: Bacteria(swptr, HP, IID_SALMONELLA, dmg, 3 ,startX, startY)
 			{
 
 			}
 
 			virtual void doSomething(); 
 
+			//Most types of bacteria are salmonella. a few are not. 
+			virtual bool isSalmon() const
+			{
+				return true;
+			}
 			virtual ~Salmonella()
 			{
 
@@ -392,7 +403,7 @@ private:
 		{
 		public: 
 			AggroSalmonella(StudentWorld* swptr, double startX, double startY)
-				: Salmonella(swptr, startX, startY, 10, 2, 4)
+				: Salmonella(swptr, startX, startY, 10, 2)
 			{
 
 			}
@@ -408,8 +419,8 @@ private:
 		class EColi : public Bacteria
 		{
 		public: 
-			EColi(StudentWorld* swptr, double startX, double startY, int HP = 5, int dmg = 4, int type = 5)
-				: Bacteria(swptr, HP, IID_ECOLI, dmg, type, 3, startX, startY)
+			EColi(StudentWorld* swptr, double startX, double startY, int HP = 5, int dmg = 4)
+				: Bacteria(swptr, HP, IID_ECOLI, dmg, 2, startX, startY)
 			{
 
 			}
@@ -687,6 +698,7 @@ private:
 
 		}
 		//How to classify a pit: can't be damaged, doesn't block other objects. 
+		//TODO: bacteria interactables also fit this desc.
 		virtual bool canBeDamaged() const
 		{
 			return false; 

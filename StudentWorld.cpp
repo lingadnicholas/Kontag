@@ -74,9 +74,6 @@ int StudentWorld::move()
     m_socrates->doSomething(); 
     list<Actor*>::iterator actorItr = m_actors.begin(); 
 
-    //TODO: If all bacteria have been killed, and all pits have disappeared,
-    //ADVANCE TO NEXT LEVEL! (Probably will need to keep count of bacteria heheh)
-
     //Let all actors do what they need to do!
     while (actorItr != m_actors.end())
     {
@@ -198,7 +195,7 @@ int StudentWorld::move()
             {
                 m_nBacteria--; 
             }
-            else if (!(*actorItr)->canBeDamaged() && !(*actorItr)->blockOtherObjects())
+            else if (!(*actorItr)->canBeDamaged() && !(*actorItr)->blockOtherObjects() && !(*actorItr)->isBacteriaInteractable()) //If pit
             {
                 m_nPits--; 
             }
@@ -333,7 +330,7 @@ bool StudentWorld::invalidOverlap(const double& x, const double& y, const bool c
     {
         if (checkPit)
         {
-            if (!(*actorItr)->canBeDamaged() && !(*actorItr)->blockOtherObjects()) //Identify if the actor is a pit
+            if (!(*actorItr)->canBeDamaged() && !(*actorItr)->blockOtherObjects() && !(*actorItr)->isBacteriaInteractable()) //Identify if the actor is a pit
             {
                 if ((*actorItr)->overlaps(x, y))
                     return true; 
@@ -372,25 +369,34 @@ void StudentWorld::addActor(const int& type, const double& x, const double& y, c
         Flame* newFlame = new Flame(this, x, y, dir);
         m_actors.push_back(newFlame);
     }
+    //TODO: REMOVE AFTER TESTING
+    
+    
     else if (type == 2) //Push Salmonella 
     {
         Salmonella* newSalmon = new Salmonella(this, x, y); 
         m_actors.push_back(newSalmon); 
     }
+   
+    /*
     else if (type == 3) //Push aggressive salmonella 
     {
         AggroSalmonella* newAggro = new AggroSalmonella(this, x, y); 
         m_actors.push_back(newAggro); 
     }
+    
+    
     else if (type == 4) //Push ecoli
     {
         EColi* newEcoli = new EColi(this, x, y);
         m_actors.push_back(newEcoli); 
     }
+    */
     else
     {
         Food* newFood = new Food(this, x, y);
         m_actors.push_back(newFood);
     }
+    
         return;
 }

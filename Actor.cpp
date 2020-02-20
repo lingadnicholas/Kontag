@@ -111,7 +111,7 @@ void Socrates::doSomething()
 				//Put a spray on the screen
 				if (m_sprayCharges > 0)
 				{
-					bool addSpray = false; 
+					addSpray = false; 
 					double x, y; 
 					getPositionInThisDirection(getDirection(), SPRITE_RADIUS * 2, x, y);
 					myWorld()->addActor(0, x, y, getDirection());
@@ -140,7 +140,11 @@ void Socrates::doSomething()
 		}
 	}
 	if (addSpray)
+	{
 		m_sprayCharges++; 
+		if (m_sprayCharges > 20)
+			m_sprayCharges = 20; 
+	}
 }
 
 /////////////////////////////////////
@@ -405,19 +409,20 @@ void Weapons::doSomething()
 //BACTERIA CLASS//
 //////////////////
 
+//////////////////
+//BACTERIA CLASS//
+//////////////////
+
 //All types of bacteria have a very similar overlapAction (damage Socrates)
 void Bacteria::overlapAction(Actor* other)
 {
-	myWorld()->mySoc()->takeDamage(m_dmgAmt); 
+	myWorld()->mySoc()->takeDamage(m_dmgAmt);
 	if (myWorld()->mySoc()->alive())
 		myWorld()->playSound(SOUND_PLAYER_HURT);
 	else
 		myWorld()->playSound(SOUND_PLAYER_DIE);
 }
 
-////////////////////
-//SALMONELLA CLASS//
-////////////////////
 void Salmonella::doSomething()
 {
 	if (!alive())
@@ -426,7 +431,7 @@ void Salmonella::doSomething()
 	}
 	if (overlaps(this, myWorld()->mySoc()))
 	{
-		overlapAction(nullptr); 
+		overlapAction(nullptr);
 		//Then skip to step 5
 	}
 	else
@@ -447,6 +452,20 @@ void Salmonella::doSomething()
 void Bacteria::spawnSelf()
 {
 	double newX = getX(), newY = getY();
+	//3 is Salmonella
+	//damages socrates, blocked by dirt, doesn't chase socrates
+	//4 is aggressive salmonella
+	//If it is neither salmonella or ecoli, it is aggressive salmonella.
+	//5 is Ecoli
+	//Chases socrates, blocked by dirt, damages socrates
+
+	int type;
+	if (isSalmon() && !chasesSocrates())
+		type = 3;
+	else if (!isSalmon() && chasesSocrates())
+		type = 5;
+	else type = 4;
+
 	if (getX() < VIEW_WIDTH / 2)
 		newX += SPRITE_RADIUS;
 	else
@@ -456,13 +475,14 @@ void Bacteria::spawnSelf()
 		newY += SPRITE_RADIUS;
 	else
 		newY -= SPRITE_RADIUS;
-	myWorld()->addActor(m_type, newX, newY, 90); 
+	myWorld()->addActor(type, newX, newY, 90);
 }
+
 
 void Bacteria::overlapsFood()
 {
-	list<Actor*>::iterator beginItr = myWorld()->myActorsItr(); 
-	list<Actor*>::iterator endItr = myWorld()->myActorsEnd(); 
+	list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
+	list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
 
 	while (beginItr != endItr)
 	{
@@ -471,26 +491,26 @@ void Bacteria::overlapsFood()
 			if (overlaps(this, (*beginItr)))
 			{
 				m_foodEaten++;
-				(*beginItr)->kill(); 
-				break; 
+				(*beginItr)->kill();
+				break;
 			}
 		}
-		beginItr++; 
+		beginItr++;
 	}
 }
 
 //Return true if failed to move
 bool Bacteria::movementPlanDistance()
 {
-	bool canMove = true; 
+	bool canMove = true;
 	if (m_MPD > 0)
 	{
-		m_MPD--; 
+		m_MPD--;
 	}
-	double newx, newy; 
+	double newx, newy;
 	if (!insideCircle(newx, newy))
 	{
-		canMove = false; 
+		canMove = false;
 	}
 
 	if (canMove)
@@ -505,13 +525,13 @@ bool Bacteria::movementPlanDistance()
 			{
 				double dirtX = (*beginItr)->getX();
 				double dirtY = (*beginItr)->getY();
-				if (radialDistance(*beginItr, newx, newy) <= SPRITE_WIDTH/2) //Movement overlap
+				if (radialDistance(*beginItr, newx, newy) <= SPRITE_WIDTH / 2) //Movement overlap
 				{
 					//Blocked by dirt, Don't move to this pos
 					canMove = false;
 				}
 			}
-			beginItr++; 
+			beginItr++;
 		}
 	}
 
@@ -524,14 +544,14 @@ bool Bacteria::movementPlanDistance()
 		failedToMove();
 		return true;
 	}
-	return false; 
+	return false;
 }
 
 //Return true if failed to move
 bool Bacteria::getClosestFood()
 {
-	double closestDistance = 128; 
-	Actor* closest; 
+	double closestDistance = 128;
+	Actor* closest;
 	list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
 	list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
 
@@ -542,34 +562,29 @@ bool Bacteria::getClosestFood()
 		if ((*beginItr)->isBacteriaInteractable() && !(*beginItr)->usedBySocrates()
 			&& radialDistance(this, *beginItr) < closestDistance) //Identify if food, and if it's within 128 pixels
 		{
-			closestDistance = radialDistance(this, *beginItr); 
-			closest = *beginItr; 
+			closestDistance = radialDistance(this, *beginItr);
+			closest = *beginItr;
 		}
-		beginItr++; 
+		beginItr++;
 	}
 	if (closestDistance == 128) //No food nearby
 	{
 		failedToMove();
-		return true; 
+		return true;
 	}
 	else
 	{
 		const double PI = 4 * atan(1);
-		bool canMove = true; 
-		double moveToX = closest->getX(); 
-		double moveToY = closest->getY(); 
-		double yDist = moveToY - getY(); 
-		double xDist = moveToY - getX(); 
+		bool canMove = true;
+		double moveToX = closest->getX();
+		double moveToY = closest->getY();
 		//Compute angle between the points 
-		double angle = atan2(moveToY, moveToX); 
-		if (angle < 0)
-			angle = (angle * -1) + 180; 
-		angle = angle * 180 / PI;
+		double angle = angleInDeg(moveToX, moveToY); 
 		setDirection(angle);
-		
-		double newx, newy; 
+
+		double newx, newy;
 		if (!insideCircle(newx, newy))
-			canMove = false; 
+			canMove = false;
 
 		//if it gets blocked by dirt, random position.
 		list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
@@ -580,7 +595,7 @@ bool Bacteria::getClosestFood()
 		{
 			if ((*beginItr)->canBeDamaged() && (*beginItr)->blockOtherObjects()) //Identify if dirt
 			{
-				if (radialDistance(*beginItr, newx, newy) <= SPRITE_WIDTH/2)
+				if (radialDistance(*beginItr, newx, newy) <= SPRITE_WIDTH / 2)
 				{
 					//Blocked by dirt, can't move.
 					canMove = false;
@@ -598,7 +613,7 @@ bool Bacteria::getClosestFood()
 		else
 			moveTo(newx, newy);
 	}
-	return false; 
+	return false;
 
 }
 
@@ -609,7 +624,7 @@ void Bacteria::failedToMove()
 	m_MPD = 10;
 }
 
-bool Bacteria::insideCircle(double& newX, double &newY) 
+bool Bacteria::insideCircle(double& newX, double& newY)
 {
 	double tempX = getX(), tempY = getY();
 	//Create dummy test variables:
@@ -622,11 +637,11 @@ bool Bacteria::insideCircle(double& newX, double &newY)
 	//Use this to check if the REAL bacteria would go somewhere it shouldn't. 
 
 	//Check if blocked by radius 
-	if (radialDistance(dummySalmon, VIEW_WIDTH/2, VIEW_HEIGHT/2) >= VIEW_RADIUS)
+	if (radialDistance(dummySalmon, VIEW_WIDTH / 2, VIEW_HEIGHT / 2) >= VIEW_RADIUS)
 	{
 		return false;
 	}
-	return true; 
+	return true;
 }
 
 //Return true only if got stuck on dirt
@@ -646,7 +661,7 @@ bool Bacteria::findSocrates(int dist)
 	}
 	else
 	{
-		const double PI = 4 * atan(1); 
+		const double PI = 4 * atan(1);
 		bool canMove = true;
 		double moveToX = myWorld()->mySoc()->getX();
 		double moveToY = myWorld()->mySoc()->getY();
@@ -659,7 +674,7 @@ bool Bacteria::findSocrates(int dist)
 		angle = angle * 180 / PI;
 		setDirection(angle);
 
-		double newx, newy; 
+		double newx, newy;
 		if (!insideCircle(newx, newy))
 			canMove = false;
 
@@ -691,77 +706,90 @@ bool Bacteria::findSocrates(int dist)
 		}
 		else
 			moveTo(newx, newy);
-	} 
+	}
 	return false;
 }
 
 
- ////////////////////
- //AGGRO SALMONELLA//
- ////////////////////
- void AggroSalmonella::doSomething()
- {
-	 if (!alive())
-		 return; 
-	 bool stop = false;
-	 if (findSocrates(72)) //Stuck on dirt
-	 {
-		 stop = true; 
-	 }
-	 if (overlaps(this, myWorld()->mySoc()))
-	 {
-		 overlapAction(nullptr);
-	 }
-	 else
-	 {
-		 checkFood();
-	 }
-	 if (stop)
-	 {
-		 return;
-	 }
-	 if (getMPD() > 0)
-	 {
-		 movementPlanDistance();
-	 }
-	 else
-	 {
-		 getClosestFood(); 
-	 }
+////////////////////
+//AGGRO SALMONELLA//
+////////////////////
+void AggroSalmonella::doSomething()
+{
+	if (!alive())
+		return;
+	bool stop = false;
+	if (findSocrates(72)) //Stuck on dirt
+	{
+		stop = true;
+	}
+	if (overlaps(this, myWorld()->mySoc()))
+	{
+		overlapAction(nullptr);
+	}
+	else
+	{
+		checkFood();
+	}
+	if (stop)
+	{
+		return;
+	}
+	if (getMPD() > 0)
+	{
+		movementPlanDistance();
+	}
+	else
+	{
+		getClosestFood();
+	}
 
- }
+}
 
- void Bacteria::checkFood()
- {
-	 if (foodEaten() == 3)
-	 {
-		 spawnSelf();
-		 resetFood();
-	 }
-	 else
-	 {
-		 overlapsFood();
-	 }
+void Bacteria::checkFood()
+{
+	if (foodEaten() == 3)
+	{
+		spawnSelf();
+		resetFood();
+	}
+	else
+	{
+		overlapsFood();
+	}
 
- }
+}
 
- void EColi::doSomething()
- {
-	 if (!alive())
-		 return;
-	 if (overlaps(this, myWorld()->mySoc()))
-	 {
-		 overlapAction(nullptr);
-	 }
-	 else
-	 {
-		 checkFood();
-	 }
-	 int i = 0; 
-	 while (!findSocrates(256) && i < 10)
-	 {
-		 setDirection(getDirection() + 10); 
-		 i++;
-	 }
+void EColi::doSomething()
+{
+	if (!alive())
+		return;
+	if (overlaps(this, myWorld()->mySoc()))
+	{
+		overlapAction(nullptr);
+	}
+	else
+	{
+		checkFood();
+	}
+	int i = 0;
+	while (!findSocrates(256) && i < 10)
+	{
+		setDirection(getDirection() + 10);
+		i++;
+	}
 
- }
+}
+//Compute angle between this and the given coords
+double Bacteria::angleInDeg(const double& otherx, const double& othery)
+{
+	const double PI = 4 * atan(1);
+	double yDist = othery - VIEW_RADIUS;
+	double xDist = otherx - VIEW_RADIUS;
+	//Compute angle between the points 
+	double angle = atan2(yDist, xDist);
+	angle = angle * 180 / PI;
+	if (angle < 0)
+		angle += 360;
+	return angle;
+}
