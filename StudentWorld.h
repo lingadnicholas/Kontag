@@ -40,6 +40,10 @@ public:
         return m_actors; 
     }
     
+    void incrementBacteria()
+    {
+        m_nBacteria++; 
+    }
     ~StudentWorld(); 
 
 private:

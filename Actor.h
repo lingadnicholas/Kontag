@@ -276,7 +276,6 @@ private:
 				return m_sprayCharges; 
 			}
 		protected: 
-			//TODO: Incomplete, but needs to be here to not be pure virtual. 
 			virtual void overlapAction(Actor* other)
 			{
 				//This actually may not need to do anything.. but not 100% sure
@@ -698,7 +697,6 @@ private:
 
 		}
 		//How to classify a pit: can't be damaged, doesn't block other objects. 
-		//TODO: bacteria interactables also fit this desc.
 		virtual bool canBeDamaged() const
 		{
 			return false; 

@@ -267,6 +267,7 @@ void ResLife::overlapAction(Actor* other)
 void Fungus::overlapAction(Actor* other)
 {
 	myWorld()->increaseScore(-50);
+	myWorld()->playSound(SOUND_PLAYER_HURT); 
 	kill();
 	mySoc()->takeDamage(20); 
 }
@@ -281,7 +282,6 @@ void Pit::doSomething()
 		kill(); 
 		return; 
 	}
-	//TODO: ADD AN IF STATEMENT TO STUDENTWORLD. IF IT'S KILLING A PIT, DECREMENT # OF PITS LEFT! 
 
 	int RNG = randInt(0, 49); //1 in 50 chance
 	const int regSalmon = 1; 
@@ -350,31 +350,20 @@ void Weapons::overlapAction(Actor* other)
 			other->takeDamage(m_damageAmt);
 			if (other->canDamageSocrates() && other->blockedByDirt())
 			{
-				if (other->alive() && !other->chasesSocrates())
+				if (other->alive() && other->isSalmon())
 					myWorld()->playSound(SOUND_SALMONELLA_HURT);
-				else if (!other->chasesSocrates())
+				else if (other->isSalmon() && !other->alive())
 				{
 					myWorld()->playSound(SOUND_SALMONELLA_DIE);
 					myWorld()->increaseScore(100);
 				}
-				else if (other->alive() && other->chasesSocrates())
+				else if (other->alive() && other->chasesSocrates() && !other->isSalmon())
 					myWorld()->playSound(SOUND_ECOLI_HURT);
-				else if (other->chasesSocrates())
+				else if (other->chasesSocrates() && !other->alive() && !other->isSalmon())
 				{
 					myWorld()->playSound(SOUND_ECOLI_DIE); 
 					myWorld()->increaseScore(100); 
 				}
-
-				if (!other->alive())
-				{
-					int RNG = randInt(0, 1);
-					if (RNG == 0)
-					{
-						myWorld()->addActor(-1, getX(), getY(), 0);
-				
-					}
-				}
-
 			}
 		}
 		else //Objects that can be damaged, but don't have HP, die immediately upon contact. 
@@ -395,7 +384,10 @@ void Weapons::doSomething()
 	while (actorItr != endItr)
 	{
 		if (overlaps(this, *actorItr) && (*actorItr)->canBeDamaged())
-			overlapAction(*actorItr); 
+		{
+			overlapAction(*actorItr);
+			break; 
+		}
 		actorItr++; 
 	}
 
@@ -461,11 +453,17 @@ void Bacteria::spawnSelf()
 
 	int type;
 	if (isSalmon() && !chasesSocrates())
-		type = 3;
+	{
+		type = 2;
+	}
 	else if (!isSalmon() && chasesSocrates())
-		type = 5;
-	else type = 4;
-
+	{
+		type = 4;
+	}
+	else
+	{
+		type = 3;
+	}
 	if (getX() < VIEW_WIDTH / 2)
 		newX += SPRITE_RADIUS;
 	else
@@ -508,9 +506,11 @@ bool Bacteria::movementPlanDistance()
 		m_MPD--;
 	}
 	double newx, newy;
+	double tempX = getX(), tempY = getY(); 
 	if (!insideCircle(newx, newy))
 	{
-		canMove = false;
+		moveTo(tempX, tempY); 
+		canMove = false; 
 	}
 
 	if (canMove)
@@ -537,7 +537,7 @@ bool Bacteria::movementPlanDistance()
 
 	if (canMove)
 	{
-		moveTo(newx, newy);
+		return false; 
 	}
 	else
 	{
@@ -574,7 +574,6 @@ bool Bacteria::getClosestFood()
 	}
 	else
 	{
-		const double PI = 4 * atan(1);
 		bool canMove = true;
 		double moveToX = closest->getX();
 		double moveToY = closest->getY();
@@ -627,18 +626,17 @@ void Bacteria::failedToMove()
 bool Bacteria::insideCircle(double& newX, double& newY)
 {
 	double tempX = getX(), tempY = getY();
-	//Create dummy test variables:
-	StudentWorld dummyWorld("");
-	StudentWorld* dummyWorldPtr = &dummyWorld;
 	getPositionInThisDirection(getDirection(), m_movePixels, newX, newY);
-	Salmonella dummyBacteria(dummyWorldPtr, newX, newY);
-	Salmonella* dummySalmon = &dummyBacteria;
+
+	//This actually moves it.
+	moveTo(newX, newY);
 
 	//Use this to check if the REAL bacteria would go somewhere it shouldn't. 
 
 	//Check if blocked by radius 
-	if (radialDistance(dummySalmon, VIEW_WIDTH / 2, VIEW_HEIGHT / 2) >= VIEW_RADIUS)
+	if (radialDistance(this, VIEW_WIDTH / 2, VIEW_HEIGHT / 2) >= VIEW_RADIUS)
 	{
+		moveTo(tempX, tempY); 
 		return false;
 	}
 	return true;
@@ -647,67 +645,47 @@ bool Bacteria::insideCircle(double& newX, double& newY)
 //Return true only if got stuck on dirt
 bool Bacteria::findSocrates(int dist)
 {
-	int distance = dist;
-
-	//Compare distance of Socrates
-	if (radialDistance(this, myWorld()->mySoc()) <= dist)
+	bool canMove = true;
+	int distance = dist; 
+	if (radialDistance(myWorld()->mySoc(), getX(), getY()) <= dist)
 	{
-		distance = radialDistance(this, myWorld()->mySoc());
-	}
-	//Unfortunately.. selection sort is the easiest to implement here
-	if (distance > dist) //No Socrates nearby
-	{
-		return false; //failed to move
-	}
-	else
-	{
-		const double PI = 4 * atan(1);
-		bool canMove = true;
-		double moveToX = myWorld()->mySoc()->getX();
-		double moveToY = myWorld()->mySoc()->getY();
-		double yDist = moveToY - getY();
-		double xDist = moveToY - getX();
-		//Compute angle between the points 
-		double angle = atan2(moveToY, moveToX);
-		if (angle < 0)
-			angle = (angle * -1) + 180;
-		angle = angle * 180 / PI;
-		setDirection(angle);
-
-		double newx, newy;
-		if (!insideCircle(newx, newy))
-			canMove = false;
-
-		//if it gets blocked by dirt, random position.
+		//Get angle to Socrates
+		double socX = myWorld()->mySoc()->getX(); 
+		double socY = myWorld()->mySoc()->getY(); 
+		double angle = angleInDeg(socX, socY); 
 		list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
 		list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
-
-		//Check if blocked by any dirt 
-		while (beginItr != endItr)
+		Direction temp = getDirection(); 
+		setDirection(angle); 
+		double newx, newy;
+		double tempX = getX(), tempY = getY();
+		if (!insideCircle(newx, newy))
 		{
-			if ((*beginItr)->canBeDamaged() && (*beginItr)->blockOtherObjects()) //Identify if dirt
+			setDirection(temp); 
+			moveTo(tempX, tempY);
+			canMove = false;
+		}
+
+		//If it can move.. first check if it would be blocked by dirt
+		if (canMove)
+		{
+
+			while (beginItr != endItr)
 			{
-				if (radialDistance(*beginItr, newx, newy) <= SPRITE_WIDTH / 2)
+				if ((*beginItr)->canBeDamaged() && (*beginItr)->blockOtherObjects()) //Identify if dirt
 				{
-					//Blocked by dirt, can't move.
-					return true;
-					break;
+					if (radialDistance(*beginItr, getX(), getY()) <= SPRITE_WIDTH / 2)
+					{
+						moveTo(tempX, tempY); 
+						return true;
+					}
 				}
+				beginItr++;
 			}
-			beginItr++;
 		}
-
-		//Not blocked by dirt, but can be blocked by the radius of the circle.
-
-		if (!canMove)
-		{
-			failedToMove();
-			return false;
-		}
-		else
-			moveTo(newx, newy);
+		return false;
 	}
-	return false;
+	return false; 
 }
 
 
@@ -751,6 +729,7 @@ void Bacteria::checkFood()
 	if (foodEaten() == 3)
 	{
 		spawnSelf();
+		myWorld()->playSound(SOUND_BACTERIUM_BORN); 
 		resetFood();
 	}
 	else
@@ -773,8 +752,10 @@ void EColi::doSomething()
 		checkFood();
 	}
 	int i = 0;
+	int tempX = getX(), tempY = getY(); 
 	while (!findSocrates(256) && i < 10)
 	{
+		moveTo(tempX, tempY); 
 		setDirection(getDirection() + 10);
 		i++;
 	}

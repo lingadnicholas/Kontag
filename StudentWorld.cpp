@@ -26,7 +26,7 @@ int StudentWorld::init()
 
     //INTIALIZE L PITS
     int numPits = getLevel(); 
-    m_nBacteria = numPits * 11; 
+    m_nBacteria = 0;
     m_nPits = numPits; 
     for (int i = 0; i < numPits; i++)
     {
@@ -86,11 +86,18 @@ int StudentWorld::move()
         if (!m_socrates->alive())
         {
             delete m_socrates; 
+            m_socrates = nullptr; 
+            decLives(); 
             return GWSTATUS_PLAYER_DIED;
         }
+
         actorItr++; 
     }
-    
+    if (m_nPits == 0 && m_nBacteria == 0)
+    {
+        playSound(SOUND_FINISHED_LEVEL); 
+        return GWSTATUS_FINISHED_LEVEL;
+    }
     //Add fungus
     const double PI = 4 * atan(1); 
     int chanceFungus = min(510 - getLevel() * 10, 200); 
@@ -120,8 +127,8 @@ int StudentWorld::move()
         const int spawnHP = 1; 
         const int spawnFlame = 2; 
         const int spawnLife = 3; 
-        //Pick a number from 0-100. This determines what goodie spawns! 
-        int RNG = randInt(0, 100);
+        //Pick a number from 0-99. This determines what goodie spawns! 
+        int RNG = randInt(0, 99);
 
         //Other random variables to determine life and position of new goodie
         int randomAngle = randInt(0, 2 * PI);
@@ -194,6 +201,13 @@ int StudentWorld::move()
             if ((*actorItr)->canDamageSocrates() && !(*actorItr)->canPickUp()) //If bacteria
             {
                 m_nBacteria--; 
+                    int RNG = randInt(0, 1);
+                    if (RNG == 0)
+                    {
+                        Food* newFood = new Food(this, (*actorItr)->getX(), (*actorItr)->getY());
+                          m_actors.push_back(newFood); 
+                    }
+                
             }
             else if (!(*actorItr)->canBeDamaged() && !(*actorItr)->blockOtherObjects() && !(*actorItr)->isBacteriaInteractable()) //If pit
             {
@@ -205,15 +219,14 @@ int StudentWorld::move()
             actorItr++;
     }
 
-    if (m_nPits == 0 && m_nBacteria == 0)
-    {
-        return GWSTATUS_FINISHED_LEVEL; 
-    }
+  
     return GWSTATUS_CONTINUE_GAME;
 }
 
 void StudentWorld::cleanUp()
 {
+    if (m_socrates != nullptr)
+        delete m_socrates; 
     list<Actor*>::iterator actorItr = m_actors.begin();
     while (actorItr != m_actors.end())
     {
@@ -322,7 +335,6 @@ void StudentWorld::outputString(int displayNum, int numDigits, string literal, s
 
 //Return true if overlap is not allowed to happen 
 //Return false otherwise. 
-//TODO: IMPLEMENT THIS FUNCTION INTO SPAWNING YOUR FOOD!
 bool StudentWorld::invalidOverlap(const double& x, const double& y, const bool checkPit, const bool checkFood, const bool checkDirt) const
 {
     list<Actor*>::const_iterator actorItr = m_actors.begin();
@@ -369,20 +381,21 @@ void StudentWorld::addActor(const int& type, const double& x, const double& y, c
         Flame* newFlame = new Flame(this, x, y, dir);
         m_actors.push_back(newFlame);
     }
-    //TODO: REMOVE AFTER TESTING
     
     
     else if (type == 2) //Push Salmonella 
     {
         Salmonella* newSalmon = new Salmonella(this, x, y); 
         m_actors.push_back(newSalmon); 
+        m_nBacteria++; 
     }
    
-    /*
+    
     else if (type == 3) //Push aggressive salmonella 
     {
         AggroSalmonella* newAggro = new AggroSalmonella(this, x, y); 
         m_actors.push_back(newAggro); 
+        m_nBacteria++; 
     }
     
     
@@ -390,8 +403,9 @@ void StudentWorld::addActor(const int& type, const double& x, const double& y, c
     {
         EColi* newEcoli = new EColi(this, x, y);
         m_actors.push_back(newEcoli); 
+        m_nBacteria++; 
     }
-    */
+    
     else
     {
         Food* newFood = new Food(this, x, y);
