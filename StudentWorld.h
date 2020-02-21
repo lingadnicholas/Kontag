@@ -24,7 +24,7 @@ public:
     }
 
     //Allows Socrates to add weapons or bacteria from outside of the class. 
-    void StudentWorld::addActor(const int& type, const double& x, const double& y, const Direction& dir);
+    void addActor(const int& type, const double& x, const double& y, const Direction& dir);
 
     //Returns an iterator to the beginning of the actors list
     std::list<Actor*>::iterator myActorsItr() {

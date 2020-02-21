@@ -109,11 +109,11 @@ void Socrates::doSomething()
 			case KEY_PRESS_SPACE :
 			{
 				//Put a spray on the screen
+				addSpray = false;
 				if (m_sprayCharges > 0)
 				{
-					addSpray = false; 
 					double x, y; 
-					getPositionInThisDirection(getDirection(), SPRITE_RADIUS * 2, x, y);
+					getPositionInThisDirection(getDirection(), SPRITE_WIDTH, x, y);
 					myWorld()->addActor(0, x, y, getDirection());
 					m_sprayCharges--; 
 					myWorld()->playSound(SOUND_PLAYER_SPRAY); 
@@ -129,7 +129,7 @@ void Socrates::doSomething()
 					for (int i = 0; i < 16; i++, angle+=22)
 					{
 						double x, y; 
-						getPositionInThisDirection(angle, SPRITE_RADIUS * 2, x, y); 
+						getPositionInThisDirection(angle, SPRITE_WIDTH, x ,y);
 						myWorld()->addActor(1, x, y, angle); 
 					}
 					m_flameCharges--; 
