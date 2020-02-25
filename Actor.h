@@ -5,24 +5,7 @@
 #include <cmath>
 class StudentWorld; 
 class Socrates; 
-//Reminder to me:
-/*
-For a class to NOT be pure virtual.. you must define
-doSomething()
 
-here is a template for a non-abstract class:
-class derivedClass : public baseClass
-{
-public:
-virtual void doSomething()
-{
-}
-virtual void overlapAction(Actor* other)
-{
-}
-private:
-};
-*/
 ///////////////
 //ACTOR CLASS//
 ///////////////
@@ -302,6 +285,12 @@ private:
 
 			//Both types of salmonella share a similar doSomething. But a fungus will be different.
 			virtual void doSomething() = 0; 
+			
+			//Increase food eaten
+			void incrementFood()
+			{
+			m_foodEaten++;
+			}
 
 			//All types of bacteria have a very similar overlapAction (damage Socrates)
 			virtual void overlapAction(Actor* other); 
@@ -631,6 +620,10 @@ private:
 					return true; 
 				}
 
+				//A weapon's overlap action will check if it overlaps with a damageable object
+				//And then damage it. 
+				virtual void overlapAction(Actor* other);
+
 				//Flames and sprays will try to attack an overlapping object if it can
 				//And then move forward SPRITE_RADIUS*2 pixels 
 				//Dissipiate if it reaches its max travel distance. 
@@ -641,9 +634,7 @@ private:
 
 				}
 			protected:
-				//A weapon's overlap action will check if it overlaps with a damageable object
-				//And then damage it. 
-				virtual void overlapAction(Actor* other);
+				
 
 				//Checks if a weapon has reached its max travel distandce. 
 				bool checkMaxDist() const

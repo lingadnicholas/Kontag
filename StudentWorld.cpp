@@ -239,10 +239,161 @@ StudentWorld::~StudentWorld()
     cleanUp(); 
 }
 
+
+void StudentWorld::addActor(const int& type, const double& x, const double& y, const Direction& dir)
+{
+    if (type == 0) //Push spray
+    {
+        Spray* newSpray = new Spray(this, x, y, dir);
+        m_actors.push_back(newSpray);
+    }
+    else if (type == 1) //Push flame
+    {
+        Flame* newFlame = new Flame(this, x, y, dir);
+        m_actors.push_back(newFlame);
+    }
+
+
+    else if (type == 2) //Push Salmonella 
+    {
+        Salmonella* newSalmon = new Salmonella(this, x, y);
+        m_actors.push_back(newSalmon);
+        m_nBacteria++;
+    }
+
+
+    else if (type == 3) //Push aggressive salmonella 
+    {
+        AggroSalmonella* newAggro = new AggroSalmonella(this, x, y);
+        m_actors.push_back(newAggro);
+        m_nBacteria++;
+    }
+
+
+    else if (type == 4) //Push ecoli
+    {
+        EColi* newEcoli = new EColi(this, x, y);
+        m_actors.push_back(newEcoli);
+        m_nBacteria++;
+    }
+
+    else
+    {
+        Food* newFood = new Food(this, x, y);
+        m_actors.push_back(newFood);
+    }
+
+    return;
+}
+
+void StudentWorld::weaponHurt(Weapons* wep)
+{
+    list<Actor*>::iterator actorItr = m_actors.begin(); 
+    list<Actor*>::iterator endItr = m_actors.end(); 
+    //Damages an object if it is able to.
+    while (actorItr != endItr)
+    {
+        if (wep->overlaps(wep, *actorItr) && (*actorItr)->canBeDamaged())
+        {
+            wep->overlapAction(*actorItr);
+            break;
+        }
+        actorItr++;
+    }
+}
+
+void StudentWorld::bacteriaOverlapsFood(Bacteria* bac)
+{
+    list<Actor*>::iterator beginItr = m_actors.begin();
+    list<Actor*>::iterator endItr = m_actors.end(); 
+
+    while (beginItr != endItr)
+    {
+        if ((*beginItr)->isBacteriaInteractable() && !(*beginItr)->usedBySocrates()) //Identify if food
+        {
+            if (bac->overlaps(bac, (*beginItr)))
+            {
+                bac->incrementFood();
+                (*beginItr)->kill();
+                break;
+            }
+        }
+        beginItr++;
+    }
+}
+
+bool StudentWorld::bacteriaCanMoveAction(Bacteria* bac, double newx, double newy)
+{
+    bool retVal = true; 
+    list<Actor*>::iterator beginItr = m_actors.begin();
+    list<Actor*>::iterator endItr = m_actors.end();
+
+    //Check if blocked by any dirt 
+    while (beginItr != endItr)
+    {
+        if ((*beginItr)->canBeDamaged() && (*beginItr)->blockOtherObjects()) //Identify if dirt
+        {
+            double dirtX = (*beginItr)->getX();
+            double dirtY = (*beginItr)->getY();
+            if (bac->radialDistance(*beginItr, newx, newy) <= SPRITE_WIDTH / 2) //Movement overlap
+            {
+                //Blocked by dirt, Don't move to this pos
+                retVal = false;
+            }
+        }
+        beginItr++;
+    }
+    return retVal;
+}
+
+bool StudentWorld::findSocratesHelper(Bacteria* bac, const double& tempX, const double& tempY)
+{
+    list<Actor*>::iterator beginItr = m_actors.begin();
+    list<Actor*>::iterator endItr = m_actors.end();
+    while (beginItr != endItr)
+    {
+        if ((*beginItr)->canBeDamaged() && (*beginItr)->blockOtherObjects()) //Identify if dirt
+        {
+            if (bac->radialDistance(*beginItr, bac->getX(), bac->getY()) <= SPRITE_WIDTH / 2)
+            {
+                bac->moveTo(tempX, tempY);
+                return true;
+            }
+        }
+        beginItr++;
+    }
+    return false; 
+}
+Actor* StudentWorld::closestFood(Bacteria* bac, double& dist, double& x, double& y)
+{
+    Actor* closest = nullptr; 
+    list<Actor*>::iterator beginItr = m_actors.begin();
+    list<Actor*>::iterator endItr = m_actors.end(); 
+
+    //Compare distance of all foods within 120 pixels.
+    //Unfortunately.. selection sort is the easiest to implement here
+    while (beginItr != endItr)
+    {
+        if ((*beginItr)->isBacteriaInteractable() && !(*beginItr)->usedBySocrates()
+            && bac->radialDistance(bac, *beginItr) < dist) //Identify if food, and if it's within 128 pixels
+        {
+            dist = bac->radialDistance(bac, *beginItr);
+            closest = *beginItr;
+        }
+        beginItr++;
+    }
+    if (closest != nullptr)
+    {
+        x= closest->getX();
+        y= closest->getY();
+    }
+    return closest; 
+}
+
+
 ////////////////////////////
 //PRIVATE HELPER FUNCTIONS//
 ////////////////////////////
-//FIGUIRE OUT LATER
 //Correctly erases a single actor from the game. 
 list<Actor*>::iterator StudentWorld::eraseSingle(list<Actor*>::iterator actorItr)
  {
@@ -367,50 +518,4 @@ bool StudentWorld::invalidOverlap(const double& x, const double& y, const bool c
         actorItr++; 
     }
     return false; 
-}
-
-void StudentWorld::addActor(const int& type, const double& x, const double& y, const Direction& dir)
-{
-    if (type == 0) //Push spray
-    {
-        Spray* newSpray = new Spray(this, x, y, dir);
-        m_actors.push_back(newSpray);
-    }
-    else if (type == 1) //Push flame
-    {
-        Flame* newFlame = new Flame(this, x, y, dir);
-        m_actors.push_back(newFlame);
-    }
-    
-    
-    else if (type == 2) //Push Salmonella 
-    {
-        Salmonella* newSalmon = new Salmonella(this, x, y); 
-        m_actors.push_back(newSalmon); 
-        m_nBacteria++; 
-    }
-   
-    
-    else if (type == 3) //Push aggressive salmonella 
-    {
-        AggroSalmonella* newAggro = new AggroSalmonella(this, x, y); 
-        m_actors.push_back(newAggro); 
-        m_nBacteria++; 
-    }
-    
-    
-    else if (type == 4) //Push ecoli
-    {
-        EColi* newEcoli = new EColi(this, x, y);
-        m_actors.push_back(newEcoli); 
-        m_nBacteria++; 
-    }
-    
-    else
-    {
-        Food* newFood = new Food(this, x, y);
-        m_actors.push_back(newFood);
-    }
-    
-        return;
 }

@@ -7,8 +7,6 @@
 #include "Actor.h"
 
 class Socrates;
-// Students:  Add code to this file, StudentWorld.cpp, Actor.h, and Actor.cpp
-
 class StudentWorld : public GameWorld
 {
 public:
@@ -26,6 +24,20 @@ public:
     //Allows Socrates to add weapons or bacteria from outside of the class. 
     void addActor(const int& type, const double& x, const double& y, const Direction& dir);
 
+    //Allows weapons to hurt studentworld objects
+    void weaponHurt(Weapons* wep); 
+
+    //Allows bacteria to eat food
+    void bacteriaOverlapsFood(Bacteria* bac); 
+
+    //Allows bacteria to move if not blocked by dirt. Returns true if doesn't get blocked.
+    bool bacteriaCanMoveAction(Bacteria* bac, double newx, double newy);
+
+    //Helps findSocrates function not collide with dirt.
+    bool StudentWorld::findSocratesHelper(Bacteria* bac, const double& tempX, const double& tempY);
+
+    //Returns a pointer to the closest food actor
+    Actor* closestFood(Bacteria* bac, double& dist, double& x, double& y);
     //Returns an iterator to the beginning of the actors list
     std::list<Actor*>::iterator myActorsItr() {
         return m_actors.begin(); 
@@ -35,11 +47,7 @@ public:
     std::list<Actor*>::iterator myActorsEnd() {
         return m_actors.end();
     }
-    //Returns the m_actors list. 
-    std::list<Actor*> myActors() {
-        return m_actors; 
-    }
-    
+
     void incrementBacteria()
     {
         m_nBacteria++; 

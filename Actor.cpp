@@ -378,19 +378,11 @@ void Weapons::doSomething()
 {
 	if (!alive()) //Can't do anything if you're dead !
 		return; 
-	list<Actor*>::iterator actorItr = myWorld()->myActorsItr(); 
-	list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
-	//Damages an object if it is able to.
-	while (actorItr != endItr)
-	{
-		if (overlaps(this, *actorItr) && (*actorItr)->canBeDamaged())
-		{
-			overlapAction(*actorItr);
-			break; 
-		}
-		actorItr++; 
-	}
 
+	//Hurts something if it is able to.
+	myWorld()->weaponHurt(this); 
+
+	//Move every tick
 	moveAngle(getDirection(), SPRITE_RADIUS * 2); 
 
 	if (checkMaxDist())
@@ -479,22 +471,7 @@ void Bacteria::spawnSelf()
 
 void Bacteria::overlapsFood()
 {
-	list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
-	list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
-
-	while (beginItr != endItr)
-	{
-		if ((*beginItr)->isBacteriaInteractable() && !(*beginItr)->usedBySocrates()) //Identify if food
-		{
-			if (overlaps(this, (*beginItr)))
-			{
-				m_foodEaten++;
-				(*beginItr)->kill();
-				break;
-			}
-		}
-		beginItr++;
-	}
+	myWorld()->bacteriaOverlapsFood(this);
 }
 
 //Return true if failed to move
@@ -515,24 +492,8 @@ bool Bacteria::movementPlanDistance()
 
 	if (canMove)
 	{
-		list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
-		list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
-
-		//Check if blocked by any dirt 
-		while (beginItr != endItr)
-		{
-			if ((*beginItr)->canBeDamaged() && (*beginItr)->blockOtherObjects()) //Identify if dirt
-			{
-				double dirtX = (*beginItr)->getX();
-				double dirtY = (*beginItr)->getY();
-				if (radialDistance(*beginItr, newx, newy) <= SPRITE_WIDTH / 2) //Movement overlap
-				{
-					//Blocked by dirt, Don't move to this pos
-					canMove = false;
-				}
-			}
-			beginItr++;
-		}
+		if (!myWorld()->bacteriaCanMoveAction(this, newx, newy))
+			canMove = false;
 	}
 
 	if (canMove)
@@ -551,23 +512,10 @@ bool Bacteria::movementPlanDistance()
 bool Bacteria::getClosestFood()
 {
 	double closestDistance = 128;
-	Actor* closest;
-	list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
-	list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
+	double moveToX, moveToY; 
+	Actor* closest = myWorld()->closestFood(this, closestDistance, moveToX, moveToY); 
 
-	//Compare distance of all foods within 120 pixels.
-	//Unfortunately.. selection sort is the easiest to implement here
-	while (beginItr != endItr)
-	{
-		if ((*beginItr)->isBacteriaInteractable() && !(*beginItr)->usedBySocrates()
-			&& radialDistance(this, *beginItr) < closestDistance) //Identify if food, and if it's within 128 pixels
-		{
-			closestDistance = radialDistance(this, *beginItr);
-			closest = *beginItr;
-		}
-		beginItr++;
-	}
-	if (closestDistance == 128) //No food nearby
+	if (closest == nullptr) //No food nearby
 	{
 		failedToMove();
 		return true;
@@ -585,24 +533,8 @@ bool Bacteria::getClosestFood()
 		if (!insideCircle(newx, newy))
 			canMove = false;
 
-		//if it gets blocked by dirt, random position.
-		list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
-		list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
-
-		//Check if blocked by any dirt 
-		while (beginItr != endItr)
-		{
-			if ((*beginItr)->canBeDamaged() && (*beginItr)->blockOtherObjects()) //Identify if dirt
-			{
-				if (radialDistance(*beginItr, newx, newy) <= SPRITE_WIDTH / 2)
-				{
-					//Blocked by dirt, can't move.
-					canMove = false;
-					break;
-				}
-			}
-			beginItr++;
-		}
+		if (!myWorld()->bacteriaCanMoveAction(this, newx, newy))
+			canMove = false; 
 
 		if (!canMove)
 		{
@@ -653,8 +585,7 @@ bool Bacteria::findSocrates(int dist)
 		double socX = myWorld()->mySoc()->getX(); 
 		double socY = myWorld()->mySoc()->getY(); 
 		double angle = angleInDeg(socX, socY); 
-		list<Actor*>::iterator beginItr = myWorld()->myActorsItr();
-		list<Actor*>::iterator endItr = myWorld()->myActorsEnd();
+
 		Direction temp = getDirection(); 
 		setDirection(angle); 
 		double newx, newy;
@@ -669,18 +600,9 @@ bool Bacteria::findSocrates(int dist)
 		//If it can move.. first check if it would be blocked by dirt
 		if (canMove)
 		{
-
-			while (beginItr != endItr)
+			if (myWorld()->findSocratesHelper(this, tempX, tempY))
 			{
-				if ((*beginItr)->canBeDamaged() && (*beginItr)->blockOtherObjects()) //Identify if dirt
-				{
-					if (radialDistance(*beginItr, getX(), getY()) <= SPRITE_WIDTH / 2)
-					{
-						moveTo(tempX, tempY); 
-						return true;
-					}
-				}
-				beginItr++;
+				return true; 
 			}
 		}
 		return false;
