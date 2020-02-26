@@ -34,19 +34,10 @@ public:
     bool bacteriaCanMoveAction(Bacteria* bac, double newx, double newy);
 
     //Helps findSocrates function not collide with dirt.
-    bool StudentWorld::findSocratesHelper(Bacteria* bac, const double& tempX, const double& tempY);
+    bool findSocratesHelper(Bacteria* bac, const double& tempX, const double& tempY);
 
     //Returns a pointer to the closest food actor
     Actor* closestFood(Bacteria* bac, double& dist, double& x, double& y);
-    //Returns an iterator to the beginning of the actors list
-    std::list<Actor*>::iterator myActorsItr() {
-        return m_actors.begin(); 
-    }
-
-    //Returns an iterator to the end of the actors list
-    std::list<Actor*>::iterator myActorsEnd() {
-        return m_actors.end();
-    }
 
     void incrementBacteria()
     {
